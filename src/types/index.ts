@@ -3,6 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export type Role = 'admin' | 'staff';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => { success: boolean; error?: string };
+  logout: () => void;
+}
+
 export interface MenuItem {
   id: string;
   category: string;
@@ -61,4 +77,4 @@ export interface Transaction {
 
 export type AppView = 'customer-qr' | 'dashboard';
 
-export type DashboardTab = 'dashboard' | 'orders' | 'menu' | 'tables' | 'sales' | 'staff' | 'settings';
+export type DashboardTab = 'dashboard' | 'pos' | 'orders' | 'menu' | 'tables' | 'sales' | 'staff' | 'reports' | 'settings';

@@ -4,8 +4,12 @@
  */
 
 import { useState } from 'react';
-import { AppView, DashboardTab, MenuItem, Table, StaffMember, Transaction } from './types';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { MenuItem, Table, StaffMember, Transaction } from './types';
 import { MENU_ITEMS, CATEGORIES, TABLES_DATA, STAFF_DATA, TRANSACTIONS_DATA } from './data/mockData';
+
+// Auth and Route Protection
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 // Layout and Pages imports
 import DashboardLayout from './layouts/DashboardLayout';
@@ -15,17 +19,14 @@ import Tables from './pages/dashboard/Tables';
 import Menu from './pages/dashboard/Menu';
 import Staff from './pages/dashboard/Staff';
 import Sales from './pages/dashboard/Sales';
+import Reports from './pages/dashboard/Reports';
 import Settings from './pages/dashboard/Settings';
 import Orders from './pages/dashboard/Orders';
 import QRMenu from './pages/customer/QRMenu';
 
-export default function App() {
-  // Main view router: 'customer-qr' | 'dashboard'
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
-  
-  // Dashboard tab state
-  const [activeTab, setActiveTab] = useState<DashboardTab>('dashboard');
-  
+function AppContent() {
+  const navigate = useNavigate();
+
   // Global Shared States (simulates DB on client)
   const [menuItems, setMenuItems] = useState<MenuItem[]>(MENU_ITEMS);
   const [tables, setTables] = useState<Table[]>(TABLES_DATA);
@@ -37,12 +38,6 @@ export default function App() {
 
   // Active simulated table scanned by client QR
   const [activeTableQRName, setActiveTableQRName] = useState('Table 04');
-
-  // Unified PIN Authentication state
-  const [currentUser, setCurrentUser] = useState<{ name: string; role: string } | null>({
-    name: 'Kenji Sato',
-    role: 'Manager'
-  });
 
   // Global Actions (synchronizes POS and Customer QR view actions)
   const handleToggleStock = (itemId: string) => {
@@ -86,7 +81,7 @@ export default function App() {
   // Switch to customer QR menu directly for a chosen table
   const handleViewMenuFromPOS = (tableName: string) => {
     setActiveTableQRName(tableName);
-    setCurrentView('customer-qr');
+    navigate('/customer');
   };
 
   const handleSendOrderToKitchen = (itemsCount: number, total: number) => {
@@ -111,86 +106,214 @@ export default function App() {
     ));
   };
 
-  // View dispatch rendering logic
-  if (currentView === 'customer-qr') {
-    return (
-      <div id="client-app-root" className="relative">
-        {/* Helper developer badge to easily return to POS terminal view */}
-        <div className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1" onClick={() => setCurrentView('dashboard')}>
-          <span>← Back to POS Station</span>
-        </div>
-        <QRMenu
-          initialMenuItems={menuItems}
-          categories={CATEGORIES}
-          tableName={activeTableQRName}
-          onSendOrderToKitchen={handleSendOrderToKitchen}
-        />
-      </div>
-    );
-  }
-
-  // Dashboard view - first check login session
-  if (!currentUser) {
-    return (
-      <Login 
-        onLoginSuccess={(session) => setCurrentUser(session)} 
-      />
-    );
-  }
-
-  // Authenticated Dashboard Layout
   return (
-    <DashboardLayout
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      onLogout={() => setCurrentUser(null)}
-      currentUser={currentUser}
-      onSwitchToCustomerView={() => setCurrentView('customer-qr')}
-      searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
-    >
-      {/* Dynamic Tab Switch Router Rendering Panels */}
-      {activeTab === 'dashboard' && <DashboardMain />}
-      {activeTab === 'orders' && <Orders />}
-      
-      {activeTab === 'tables' && (
-        <Tables 
-          tables={tables}
-          onToggleStatus={handleToggleTableStatus}
-          onViewMenu={handleViewMenuFromPOS}
-          searchQuery={searchQuery}
-        />
-      )}
-      
-      {activeTab === 'menu' && (
-        <Menu 
-          menuItems={menuItems}
-          onToggleStock={handleToggleStock}
-          onAddItem={handleAddItem}
-          onDeleteItem={handleDeleteItem}
-          searchQuery={searchQuery}
-        />
-      )}
-      
-      {activeTab === 'staff' && (
-        <Staff 
-          staffList={staffList}
-          onToggleShift={handleToggleStaffShift}
-          onAddStaff={handleAddStaff}
-          onEditStaff={handleEditStaff}
-          searchQuery={searchQuery}
-        />
-      )}
-      
-      {activeTab === 'sales' && (
-        <Sales 
-          transactions={transactions}
-          searchQuery={searchQuery}
-        />
-      )}
-      
-      {activeTab === 'settings' && <Settings />}
+    <Routes>
+      {/* Public Route: Login */}
+      <Route path="/login" element={<Login />} />
 
-    </DashboardLayout>
+      {/* Public Route: Customer QR Menu */}
+      <Route
+        path="/customer"
+        element={
+          <div id="client-app-root" className="relative">
+            <div
+              className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
+              onClick={() => navigate('/dashboard')}
+            >
+              <span>← Back to POS Station</span>
+            </div>
+            <QRMenu
+              initialMenuItems={menuItems}
+              categories={CATEGORIES}
+              tableName={activeTableQRName}
+              onSendOrderToKitchen={handleSendOrderToKitchen}
+            />
+          </div>
+        }
+      />
+      <Route path="/qr" element={<Navigate to="/customer" replace />} />
+
+      {/* Protected Routes (Require Authentication) */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <DashboardMain />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <DashboardMain />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/pos"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <DashboardMain />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/orders"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Orders />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tables"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Tables
+                tables={tables}
+                onToggleStatus={handleToggleTableStatus}
+                onViewMenu={handleViewMenuFromPOS}
+                searchQuery={searchQuery}
+              />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/menu"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Menu
+                menuItems={menuItems}
+                onToggleStock={handleToggleStock}
+                onAddItem={handleAddItem}
+                onDeleteItem={handleDeleteItem}
+                searchQuery={searchQuery}
+              />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/staff"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Staff
+                staffList={staffList}
+                onToggleShift={handleToggleStaffShift}
+                onAddStaff={handleAddStaff}
+                onEditStaff={handleEditStaff}
+                searchQuery={searchQuery}
+              />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/sales"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Sales
+                transactions={transactions}
+                searchQuery={searchQuery}
+              />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Reports />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Settings />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Catch-all fallback */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
