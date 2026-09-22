@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -13,20 +14,21 @@ import {
   Users, 
   Settings, 
   LogOut, 
-  Search, 
   Bell, 
   ChevronRight, 
-  Terminal
+  Terminal,
+  FileBarChart
 } from 'lucide-react';
 import { DashboardTab } from '../types';
 import { SearchBar } from '../components/ui';
+import { useAuth } from '../hooks/useAuth';
 
 interface DashboardLayoutProps {
-  activeTab: DashboardTab;
-  setActiveTab: (tab: DashboardTab) => void;
+  activeTab?: DashboardTab;
+  setActiveTab?: (tab: DashboardTab) => void;
   children: React.ReactNode;
-  onLogout: () => void;
-  currentUser: { name: string; role: string } | null;
+  onLogout?: () => void;
+  currentUser?: { name: string; role: string } | null;
   onSwitchToCustomerView?: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -37,21 +39,54 @@ export default function DashboardLayout({
   setActiveTab,
   children,
   onLogout,
-  currentUser,
+  currentUser: propUser,
   onSwitchToCustomerView,
   searchQuery,
   setSearchQuery
 }: DashboardLayoutProps) {
-  
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user: authUser, logout: authLogout } = useAuth();
+
+  const currentUser = authUser
+    ? { name: authUser.name, role: authUser.role === 'admin' ? 'Administrator' : 'Staff Member' }
+    : propUser || { name: 'Staff User', role: 'Staff' };
+
   const navItems = [
-    { id: 'dashboard' as DashboardTab, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'orders' as DashboardTab, label: 'Orders', icon: ShoppingBag, badge: 5 },
-    { id: 'menu' as DashboardTab, label: 'Menu', icon: Utensils },
-    { id: 'tables' as DashboardTab, label: 'Tables & QR', icon: QrCode },
-    { id: 'sales' as DashboardTab, label: 'Sales History', icon: History },
-    { id: 'staff' as DashboardTab, label: 'Staff', icon: Users },
-    { id: 'settings' as DashboardTab, label: 'Settings', icon: Settings },
+    { id: 'dashboard' as DashboardTab, path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'orders' as DashboardTab, path: '/orders', label: 'Orders', icon: ShoppingBag, badge: 5 },
+    { id: 'menu' as DashboardTab, path: '/menu', label: 'Menu', icon: Utensils },
+    { id: 'tables' as DashboardTab, path: '/tables', label: 'Tables & QR', icon: QrCode },
+    { id: 'sales' as DashboardTab, path: '/sales', label: 'Sales History', icon: History },
+    { id: 'staff' as DashboardTab, path: '/staff', label: 'Staff', icon: Users },
+    { id: 'reports' as DashboardTab, path: '/reports', label: 'Reports', icon: FileBarChart },
+    { id: 'settings' as DashboardTab, path: '/settings', label: 'Settings', icon: Settings },
   ];
+
+  const currentPath = location.pathname;
+
+  const handleNavClick = (item: typeof navItems[0]) => {
+    if (setActiveTab) {
+      setActiveTab(item.id);
+    }
+    navigate(item.path);
+  };
+
+  const handleLogoutClick = () => {
+    if (onLogout) {
+      onLogout();
+    }
+    authLogout();
+    navigate('/login', { replace: true });
+  };
+
+  const handleSwitchToCustomer = () => {
+    if (onSwitchToCustomerView) {
+      onSwitchToCustomerView();
+    } else {
+      navigate('/customer');
+    }
+  };
 
   return (
     <div id="dashboard-layout-root" className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans antialiased flex">
@@ -72,33 +107,31 @@ export default function DashboardLayout({
           </div>
 
           {/* Quick Access Client-View Simulator Button */}
-          {onSwitchToCustomerView && (
-            <div className="px-4 pt-4 pb-2">
-              <button 
-                id="btn-customer-qr-shortcut"
-                onClick={onSwitchToCustomerView}
-                className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition-all text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-between border border-orange-200/40 group active:scale-[0.98]"
-              >
-                <span className="flex items-center gap-2">
-                  <Terminal className="w-3.5 h-3.5" />
-                  <span>STAFF POS TERMINAL</span>
-                </span>
-                <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-          )}
+          <div className="px-4 pt-4 pb-2">
+            <button 
+              id="btn-customer-qr-shortcut"
+              onClick={handleSwitchToCustomer}
+              className="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition-all text-xs font-bold py-2.5 px-3 rounded-xl flex items-center justify-between border border-orange-200/40 group active:scale-[0.98] cursor-pointer"
+            >
+              <span className="flex items-center gap-2">
+                <Terminal className="w-3.5 h-3.5" />
+                <span>CUSTOMER QR VIEW</span>
+              </span>
+              <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
 
           {/* Navigation Links */}
           <nav id="sidebar-nav" className="px-3 py-2 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = currentPath === item.path || (currentPath === '/' && item.path === '/dashboard') || activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   id={`nav-item-${item.id}`}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold tracking-tight transition-all active:scale-[0.99] ${
+                  onClick={() => handleNavClick(item)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold tracking-tight transition-all active:scale-[0.99] cursor-pointer ${
                     isActive 
                       ? 'bg-orange-50/60 text-orange-600' 
                       : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -135,8 +168,8 @@ export default function DashboardLayout({
           
           <button 
             id="btn-sidebar-logout"
-            onClick={onLogout}
-            className="w-full text-slate-400 hover:text-slate-600 font-semibold text-xs py-2 px-1 flex items-center gap-2.5 transition-colors active:scale-[0.98]"
+            onClick={handleLogoutClick}
+            className="w-full text-slate-400 hover:text-slate-600 font-semibold text-xs py-2 px-1 flex items-center gap-2.5 transition-colors active:scale-[0.98] cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Logout</span>
@@ -169,7 +202,7 @@ export default function DashboardLayout({
             </div>
 
             {/* Notification Bell */}
-            <button id="btn-topbar-bell" className="w-8 h-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors active:scale-95">
+            <button id="btn-topbar-bell" className="w-8 h-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-500 relative transition-colors active:scale-95 cursor-pointer">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-white"></span>
             </button>
