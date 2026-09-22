@@ -3,10 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
-import { Plus, Edit3, Trash2, Search, SlidersHorizontal } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import { MenuItem } from '../../types';
 import { formatPrice } from '../../utils/format';
+import {
+  Button,
+  Input,
+  Select,
+  Modal,
+  Badge,
+  Tabs,
+  SearchBar,
+  Card,
+  ConfirmDialog,
+} from '../../components/ui';
 
 interface MenuProps {
   menuItems: MenuItem[];
@@ -20,6 +31,7 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
   const [activeTab, setActiveTab] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   
   // New Item State Form fields
   const [name, setName] = useState('');
@@ -43,7 +55,6 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
     e.preventDefault();
     if (!name || !price) return;
     
-    const code = Math.floor(100 + Math.random() * 900);
     const newItem: MenuItem = {
       id: `food-${Date.now()}`,
       category,
@@ -94,48 +105,36 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Menu Management</h2>
           <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Toggle stock levels, adjust item prices, and organize dishes.</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowAddModal(true)}
-          className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+          icon={<Plus className="w-4 h-4" />}
+          variant="primary"
+          size="md"
         >
-          <Plus className="w-4 h-4" />
-          <span>Add Menu Item</span>
-        </button>
+          Add Menu Item
+        </Button>
       </div>
 
       {/* Row containing horizontal categories and custom code filter */}
       <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between border-b border-slate-100 pb-3">
         
         {/* Nav tabs selection pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 shrink-0 w-full md:w-auto">
-          {categoriesTab.map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  isActive
-                    ? 'bg-orange-600 text-white shadow-xs'
-                    : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-slate-100'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${isActive ? 'bg-orange-700 text-orange-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>{tab.count}</span>
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          tabs={categoriesTab}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          variant="orange"
+          className="w-full md:w-auto"
+        />
 
         {/* Local Filter search container input */}
-        <div className="relative flex items-center w-full md:w-72">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3" />
-          <input
-            type="text"
-            placeholder="Filter dish or code (#R01)..."
+        <div className="w-full md:w-72">
+          <SearchBar
             value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            className="w-full bg-white border border-slate-100 py-1.5 pl-9 pr-4 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/15"
+            onChange={setFilterQuery}
+            placeholder="Filter dish or code (#R01)..."
+            size="sm"
+            className="bg-white"
           />
         </div>
 
@@ -144,9 +143,11 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
       {/* Main Grid View */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map(item => (
-          <div
+          <Card
             key={item.id}
-            className="bg-white border border-slate-100 rounded-2xl p-3 flex gap-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.015)] group hover:border-slate-200 transition-all"
+            padding="sm"
+            hoverEffect
+            className="flex gap-3.5"
           >
             {/* Left Image box with absolute design codes */}
             <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-50 shrink-0">
@@ -168,9 +169,9 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
                   <div className="min-w-0">
                     {/* Badge uppercase label */}
                     {item.badge && (
-                      <span className="inline-block text-[8px] font-black tracking-wider text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded mb-1 leading-none uppercase">
+                      <Badge variant="orange" size="xs" className="mb-1">
                         {item.badge}
-                      </span>
+                      </Badge>
                     )}
                     <h3 className="font-extrabold text-slate-800 text-xs truncate leading-snug">{item.name}</h3>
                     {item.jpName && (
@@ -192,20 +193,17 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
 
                 <div className="flex items-center gap-1.5">
                   {/* Switch stock level button */}
-                  <button
+                  <Button
                     onClick={() => onToggleStock(item.id)}
-                    className={`text-[9px] font-black px-2.5 py-1 rounded-lg transition-colors border ${
-                      item.inStock
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-100'
-                        : 'bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-100'
-                    }`}
+                    variant={item.inStock ? 'secondary' : 'subtle-orange'}
+                    size="xs"
                   >
                     Toggle Stock
-                  </button>
+                  </Button>
                   {/* Delete button */}
                   <button
-                    onClick={() => onDeleteItem(item.id)}
-                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90"
+                    onClick={() => setItemToDelete(item.id)}
+                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90 cursor-pointer"
                     title="Delete item"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -215,113 +213,113 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
 
             </div>
 
-          </div>
+          </Card>
         ))}
       </div>
 
       {/* Add New Item Dialog Modal Frame */}
-      {showAddModal && (
-        <div id="add-item-modal" className="fixed inset-0 bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl border border-stone-200/60 p-6 w-full max-w-md shadow-2xl relative">
-            
-            <h3 className="font-extrabold text-slate-900 text-sm mb-4">Add New Menu Item</h3>
-            
-            <form onSubmit={handleAddItemSubmit} className="space-y-4">
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Item Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Tonkotsu Ramen"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Japanese Name</label>
-                  <input
-                    type="text"
-                    value={jpName}
-                    onChange={(e) => setJpName(e.target.value)}
-                    placeholder="豚骨ラーメン"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Price ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="13.50"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white"
-                  >
-                    <option value="popular">Popular</option>
-                    <option value="ramen">Ramen</option>
-                    <option value="sushi">Sushi & Rolls</option>
-                    <option value="appetizers">Appetizers</option>
-                    <option value="drinks">Drinks</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Ribbon Badge Tag</label>
-                <input
-                  type="text"
-                  value={badge}
-                  onChange={(e) => setBadge(e.target.value)}
-                  placeholder="POPULAR / SPICY / VEGAN"
-                  className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Rich pork broth, chashu slices, seasoned soft egg..."
-                  className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white h-20 resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2.5 justify-end pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-bold text-slate-600 transition-colors active:scale-95"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-500 rounded-xl text-xs font-bold text-white transition-colors active:scale-95 shadow-md"
-                >
-                  Add Item
-                </button>
-              </div>
-
-            </form>
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New Menu Item"
+        maxWidth="md"
+      >
+        <form onSubmit={handleAddItemSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Item Name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Tonkotsu Ramen"
+              required
+            />
+            <Input
+              label="Japanese Name"
+              type="text"
+              value={jpName}
+              onChange={(e) => setJpName(e.target.value)}
+              placeholder="豚骨ラーメン"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Price ($)"
+              type="number"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="13.50"
+              required
+            />
+            <Select
+              label="Category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              options={[
+                { value: 'popular', label: 'Popular' },
+                { value: 'ramen', label: 'Ramen' },
+                { value: 'sushi', label: 'Sushi & Rolls' },
+                { value: 'appetizers', label: 'Appetizers' },
+                { value: 'drinks', label: 'Drinks' },
+              ]}
+            />
+          </div>
+
+          <Input
+            label="Ribbon Badge Tag"
+            type="text"
+            value={badge}
+            onChange={(e) => setBadge(e.target.value)}
+            placeholder="POPULAR / SPICY / VEGAN"
+          />
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Rich pork broth, chashu slices, seasoned soft egg..."
+              className="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:bg-white h-20 resize-none"
+            />
+          </div>
+
+          <div className="flex gap-2.5 justify-end pt-3">
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={() => setShowAddModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+            >
+              Add Item
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Item Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(itemToDelete)}
+        onClose={() => setItemToDelete(null)}
+        onConfirm={() => {
+          if (itemToDelete) {
+            onDeleteItem(itemToDelete);
+            setItemToDelete(null);
+          }
+        }}
+        title="Delete Menu Item"
+        message="Are you sure you want to delete this menu item? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+      />
 
     </div>
   );

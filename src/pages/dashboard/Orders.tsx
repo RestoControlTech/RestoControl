@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Play, CheckCircle, Trash, ShoppingBag, Clock } from 'lucide-react';
 import { formatPrice } from '../../utils/format';
+import { Button, Badge, BadgeVariant, Card, ConfirmDialog } from '../../components/ui';
 
 export default function Orders() {
   const [orders, setOrders] = useState([
@@ -16,23 +17,26 @@ export default function Orders() {
     { id: '1022', table: 'Table 08', time: '18:31', items: 'Pork Gyoza 5pc x3, Yuzu Soda x4', total: 33.50, status: 'Served' },
   ]);
 
+  const [orderToVoid, setOrderToVoid] = useState<string | null>(null);
+
   const handleStatusChange = (orderId: string, newStatus: string) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
   };
 
-  const handleVoid = (orderId: string) => {
-    if (confirm(`Are you sure you want to void Order #${orderId}?`)) {
-      setOrders(prev => prev.filter(o => o.id !== orderId));
+  const confirmVoid = () => {
+    if (orderToVoid) {
+      setOrders(prev => prev.filter(o => o.id !== orderToVoid));
+      setOrderToVoid(null);
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadgeVariant = (status: string): BadgeVariant => {
     switch (status) {
-      case 'Preparing': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'Cooking': return 'bg-amber-50 text-amber-700 border-amber-100';
-      case 'Ready': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'Served': return 'bg-slate-50 text-slate-500 border-slate-100';
-      default: return 'bg-slate-50 text-slate-500 border-slate-100';
+      case 'Preparing': return 'blue';
+      case 'Cooking': return 'amber';
+      case 'Ready': return 'emerald';
+      case 'Served': return 'slate';
+      default: return 'slate';
     }
   };
 
@@ -48,9 +52,11 @@ export default function Orders() {
       {/* Grid listing live order tickets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {orders.map(order => (
-          <div
+          <Card
             key={order.id}
-            className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between hover:border-slate-200 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.015)]"
+            padding="md"
+            hoverEffect
+            className="flex flex-col justify-between"
           >
             <div>
               <div className="flex justify-between items-start border-b border-slate-50 pb-2.5">
@@ -65,9 +71,9 @@ export default function Orders() {
                   </p>
                 </div>
                 
-                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
+                <Badge variant={getStatusBadgeVariant(order.status)} size="xs">
                   {order.status}
-                </span>
+                </Badge>
               </div>
 
               {/* Items List */}
@@ -85,35 +91,39 @@ export default function Orders() {
 
               <div className="flex items-center gap-1.5">
                 {order.status === 'Preparing' && (
-                  <button
+                  <Button
                     onClick={() => handleStatusChange(order.id, 'Cooking')}
-                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-black text-[10px] py-1.5 px-3 rounded-lg flex items-center gap-1 transition-colors active:scale-95 border border-amber-100/40"
+                    variant="warning"
+                    size="xs"
+                    icon={<Play className="w-3 h-3 text-amber-500" />}
                   >
-                    <Play className="w-3 h-3 text-amber-500" />
-                    <span>Fire</span>
-                  </button>
+                    Fire
+                  </Button>
                 )}
                 {order.status === 'Cooking' && (
-                  <button
+                  <Button
                     onClick={() => handleStatusChange(order.id, 'Ready')}
-                    className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-black text-[10px] py-1.5 px-3 rounded-lg flex items-center gap-1 transition-colors active:scale-95 border border-emerald-100/40"
+                    variant="success"
+                    size="xs"
+                    icon={<CheckCircle className="w-3 h-3 text-emerald-500" />}
                   >
-                    <CheckCircle className="w-3 h-3 text-emerald-500" />
-                    <span>Complete</span>
-                  </button>
+                    Complete
+                  </Button>
                 )}
                 {order.status === 'Ready' && (
-                  <button
+                  <Button
                     onClick={() => handleStatusChange(order.id, 'Served')}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-[10px] py-1.5 px-3 rounded-lg flex items-center gap-1 transition-colors active:scale-95 border border-slate-200/50"
+                    variant="secondary"
+                    size="xs"
+                    icon={<CheckCircle className="w-3 h-3 text-slate-500" />}
                   >
-                    <CheckCircle className="w-3 h-3 text-slate-500" />
-                    <span>Deliver</span>
-                  </button>
+                    Deliver
+                  </Button>
                 )}
                 <button
-                  onClick={() => handleVoid(order.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90"
+                  type="button"
+                  onClick={() => setOrderToVoid(order.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90 cursor-pointer"
                   title="Void order ticket"
                 >
                   <Trash className="w-3.5 h-3.5" />
@@ -121,9 +131,20 @@ export default function Orders() {
               </div>
             </div>
 
-          </div>
+          </Card>
         ))}
       </div>
+
+      {/* Confirm Void Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(orderToVoid)}
+        onClose={() => setOrderToVoid(null)}
+        onConfirm={confirmVoid}
+        title="Void Order Ticket"
+        message={`Are you sure you want to void Order #${orderToVoid}? This action will remove the ticket from the kitchen display.`}
+        confirmText="Void Order"
+        variant="danger"
+      />
 
     </div>
   );

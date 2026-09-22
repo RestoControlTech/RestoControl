@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React from 'react';
 import { QrCode, ExternalLink, Printer } from 'lucide-react';
 import { Table } from '../../types';
+import { Button, Card } from '../../components/ui';
 
 interface TablesProps {
   tables: Table[];
@@ -38,9 +40,11 @@ export default function Tables({ tables, onToggleStatus, onViewMenu, searchQuery
         {filteredTables.map((table) => {
           const isOccupied = table.status === 'Occupied';
           return (
-            <div 
+            <Card 
               key={table.id}
-              className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-between hover:border-slate-200 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.02)]"
+              padding="md"
+              hoverEffect
+              className="flex flex-col justify-between"
             >
               
               {/* Table Info and Header Status badge */}
@@ -52,9 +56,10 @@ export default function Tables({ tables, onToggleStatus, onViewMenu, searchQuery
                 
                 {/* Clickable Status toggle */}
                 <button
+                  type="button"
                   onClick={() => onToggleStatus(table.id)}
                   title="Click to toggle status"
-                  className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold border uppercase tracking-wider transition-all active:scale-[0.93] ${
+                  className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold border uppercase tracking-wider transition-all active:scale-[0.93] cursor-pointer ${
                     isOccupied
                       ? 'bg-orange-50 border-orange-200 text-orange-600'
                       : 'bg-emerald-50 border-emerald-200 text-emerald-600'
@@ -75,23 +80,25 @@ export default function Tables({ tables, onToggleStatus, onViewMenu, searchQuery
 
               {/* Interaction row */}
               <div className="grid grid-cols-2 gap-2 border-t border-slate-50 pt-3">
-                <button
+                <Button
                   onClick={() => alert(`Sending Print Job for ${table.name} QR Code to Station Printer...`)}
-                  className="bg-slate-50 hover:bg-slate-100/85 text-slate-600 font-bold text-[10px] py-1.5 px-3 rounded-lg flex items-center justify-center gap-1 border border-slate-100 transition-colors active:scale-95"
+                  variant="secondary"
+                  size="xs"
+                  icon={<Printer className="w-3 h-3 text-slate-400" />}
                 >
-                  <Printer className="w-3 h-3 text-slate-400" />
-                  <span>Print QR</span>
-                </button>
-                <button
+                  Print QR
+                </Button>
+                <Button
                   onClick={() => onViewMenu(table.name)}
-                  className="bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-[10px] py-1.5 px-3 rounded-lg flex items-center justify-center gap-1 border border-orange-100/40 transition-colors active:scale-95"
+                  variant="subtle-orange"
+                  size="xs"
+                  icon={<ExternalLink className="w-3 h-3 text-orange-500" />}
                 >
-                  <ExternalLink className="w-3 h-3 text-orange-500" />
-                  <span>View Menu</span>
-                </button>
+                  View Menu
+                </Button>
               </div>
 
-            </div>
+            </Card>
           );
         })}
       </div>

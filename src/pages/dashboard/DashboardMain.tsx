@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React from 'react';
 import { TrendingUp, Users, ShoppingBag, Utensils, AlertCircle, Clock } from 'lucide-react';
 import { formatPrice } from '../../utils/format';
+import { Card } from '../../components/ui';
 
 export default function DashboardMain() {
   return (
@@ -20,7 +22,7 @@ export default function DashboardMain() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* KPI Card 1 */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+        <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sales Revenue</p>
             <h3 className="text-lg font-black text-slate-800 tracking-tight">{formatPrice(3842.50)}</h3>
@@ -32,10 +34,10 @@ export default function DashboardMain() {
           <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
             <TrendingUp className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
 
         {/* KPI Card 2 */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+        <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Orders</p>
             <h3 className="text-lg font-black text-slate-800 tracking-tight">12 Active</h3>
@@ -44,10 +46,10 @@ export default function DashboardMain() {
           <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
             <ShoppingBag className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
 
         {/* KPI Card 3 */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+        <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff On Duty</p>
             <h3 className="text-lg font-black text-slate-800 tracking-tight">5 Members</h3>
@@ -56,10 +58,10 @@ export default function DashboardMain() {
           <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
             <Users className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
 
         {/* KPI Card 4 */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+        <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Low Stock Items</p>
             <h3 className="text-lg font-black text-slate-800 tracking-tight">1 Alert</h3>
@@ -71,7 +73,7 @@ export default function DashboardMain() {
           <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
             <Utensils className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
 
       </div>
 
@@ -79,7 +81,7 @@ export default function DashboardMain() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left column - Live Activity stream */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
+        <Card padding="lg" className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Live Activity Stream</h4>
             <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
@@ -120,10 +122,10 @@ export default function DashboardMain() {
               <span className="text-[10px] text-slate-400 font-bold">45 mins ago</span>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Right Column - Kitchen Course status */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
+        <Card padding="lg" className="space-y-4">
           <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Kitchen Queue Status</h4>
           
           <div className="space-y-3.5">
@@ -155,7 +157,7 @@ export default function DashboardMain() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
       </div>
 

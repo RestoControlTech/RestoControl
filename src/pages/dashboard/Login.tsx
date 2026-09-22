@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
-import { Lock, User, Eye, EyeOff, Terminal, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import { validatePin } from '../../auth/authHelper';
+import { Button, Input } from '../../components/ui';
 
 interface LoginProps {
   onLoginSuccess: (session: { name: string; role: string }) => void;
@@ -69,52 +70,41 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Email / Username field */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-stone-500">
-              <label htmlFor="username">Username or Email</label>
-              <span className="text-emerald-600 text-[10px] font-bold">STAFF ID OK</span>
-            </div>
-            <div className="relative flex items-center">
-              <User className="w-4 h-4 absolute left-3.5 text-stone-400" />
-              <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. staff@kurobistro.com or 4091"
-                className="w-full bg-stone-50 border border-stone-200/80 rounded-xl py-2.5 pl-10 pr-4 text-xs font-medium text-stone-800 placeholder-stone-400/90 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-1 focus:ring-orange-500 transition-colors"
-                required
-              />
-            </div>
-          </div>
+          <Input
+            label="Username or Email"
+            sublabel="STAFF ID OK"
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="e.g. staff@kurobistro.com or 4091"
+            icon={<User className="w-4 h-4" />}
+            required
+          />
 
           {/* Password / PIN code field */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-stone-500">
-              <label htmlFor="pin">Password or PIN</label>
-              <span className="text-stone-400 text-[10px] font-bold">4-6 DIGIT PIN</span>
-            </div>
-            <div className="relative flex items-center">
-              <Lock className="w-4 h-4 absolute left-3.5 text-stone-400" />
-              <input
-                id="pin"
-                type={showPin ? 'text' : 'password'}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="••••••••"
-                className="w-full bg-stone-50 border border-stone-200/80 rounded-xl py-2.5 pl-10 pr-11 text-xs font-semibold tracking-widest text-stone-800 placeholder-stone-400 focus:outline-none focus:border-orange-500 focus:bg-white focus:ring-1 focus:ring-orange-500 transition-colors"
-                required
-              />
+          <Input
+            label="Password or PIN"
+            sublabel="4-6 DIGIT PIN"
+            id="pin"
+            type={showPin ? 'text' : 'password'}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            placeholder="••••••••"
+            icon={<Lock className="w-4 h-4" />}
+            iconRight={
               <button
                 type="button"
                 id="toggle-pin-visibility"
                 onClick={() => setShowPin(!showPin)}
-                className="absolute right-3.5 p-1 text-stone-400 hover:text-stone-600 rounded-lg active:scale-95"
+                className="p-1 text-stone-400 hover:text-stone-600 rounded-lg active:scale-95 cursor-pointer"
               >
                 {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-            </div>
-          </div>
+            }
+            className="tracking-widest"
+            required
+          />
 
           {/* Optional Station Memory Checkbox & link row */}
           <div className="flex items-center justify-between text-xs font-semibold text-stone-500 pt-1">
@@ -143,7 +133,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 key={num}
                 type="button"
                 onClick={() => insertDigit(num)}
-                className="h-10 bg-stone-50 hover:bg-stone-100 border border-stone-200/40 text-sm font-black text-stone-700 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center shadow-xs"
+                className="h-10 bg-stone-50 hover:bg-stone-100 border border-stone-200/40 text-sm font-black text-stone-700 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center shadow-xs cursor-pointer"
               >
                 {num}
               </button>
@@ -151,34 +141,37 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <button
               type="button"
               onClick={deleteDigit}
-              className="h-10 bg-stone-100/50 hover:bg-stone-100 border border-stone-200/40 text-xs font-black text-stone-500 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center"
+              className="h-10 bg-stone-100/50 hover:bg-stone-100 border border-stone-200/40 text-xs font-black text-stone-500 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center cursor-pointer"
             >
               Clear
             </button>
             <button
               type="button"
               onClick={() => insertDigit('0')}
-              className="h-10 bg-stone-50 hover:bg-stone-100 border border-stone-200/40 text-sm font-black text-stone-700 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center shadow-xs"
+              className="h-10 bg-stone-50 hover:bg-stone-100 border border-stone-200/40 text-sm font-black text-stone-700 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center shadow-xs cursor-pointer"
             >
               0
             </button>
             <button
               type="submit"
-              className="h-10 bg-orange-100 text-orange-700 hover:bg-orange-200 font-black text-xs rounded-xl transition-all active:scale-[0.93] flex items-center justify-center"
+              className="h-10 bg-orange-100 text-orange-700 hover:bg-orange-200 font-black text-xs rounded-xl transition-all active:scale-[0.93] flex items-center justify-center cursor-pointer"
             >
               Submit
             </button>
           </div>
 
           {/* Sign In Primary CTA Button */}
-          <button
+          <Button
             type="submit"
             id="btn-login-submit"
-            className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-bold text-xs tracking-wide transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-2 mt-2"
+            variant="primary"
+            size="lg"
+            fullWidth
+            className="mt-2"
           >
             <span>Sign In to Station</span>
             <span className="text-sm font-normal">→</span>
-          </button>
+          </Button>
 
         </form>
 

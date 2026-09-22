@@ -3,10 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo } from 'react';
-import { Search, ShoppingCart, ArrowRight, X, Sparkles, Check, AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ShoppingCart, ArrowRight, X, Check } from 'lucide-react';
 import { MenuItem, Category, CartItem } from '../../types';
 import { formatPrice } from '../../utils/format';
+import {
+  Button,
+  Badge,
+  SearchBar,
+  LoadingState,
+  EmptyState,
+  ErrorState,
+} from '../../components/ui';
 
 interface QRMenuProps {
   initialMenuItems: MenuItem[];
@@ -160,27 +168,16 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
           {/* Quick Search bar */}
           <div className="px-4 pb-2.5 pt-1">
-            <div className="relative flex items-center">
-              <Search className="w-4 h-4 absolute left-3 text-stone-400 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (uiState !== 'normal') setUiState('normal');
-                }}
-                placeholder="Search dishes, ramen, rolls..."
-                className="w-full pl-9 pr-8 py-2 bg-stone-100/90 text-xs text-stone-800 placeholder-stone-400 rounded-xl border border-transparent focus:border-stone-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/15 transition-all text-xs"
-              />
-              {searchQuery.length > 0 && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-2.5 text-stone-400 hover:text-stone-600 p-0.5"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+            <SearchBar
+              value={searchQuery}
+              onChange={(val) => {
+                setSearchQuery(val);
+                if (uiState !== 'normal') setUiState('normal');
+              }}
+              placeholder="Search dishes, ramen, rolls..."
+              size="sm"
+              className="bg-stone-100/90 text-stone-800 placeholder-stone-400 border-transparent focus:border-stone-300"
+            />
           </div>
 
           {/* Scrolling Categories selector rail */}
@@ -190,11 +187,12 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
               return (
                 <button
                   key={cat.id}
+                  type="button"
                   onClick={() => {
                     setCurrentCategory(cat.id);
                     if (uiState !== 'normal') setUiState('normal');
                   }}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all ${
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
                     isActive
                       ? 'bg-stone-900 text-white shadow-sm'
                       : 'bg-stone-100 text-stone-600 hover:bg-stone-200/80 hover:text-stone-900'
@@ -220,8 +218,9 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
             {(['normal', 'loading', 'empty', 'error'] as const).map(s => (
               <button
                 key={s}
+                type="button"
                 onClick={() => setUiState(s)}
-                className={`px-1.5 py-0.5 rounded capitalize leading-none ${
+                className={`px-1.5 py-0.5 rounded capitalize leading-none cursor-pointer ${
                   uiState === s
                     ? 'bg-stone-800 text-white font-black'
                     : 'hover:bg-stone-200 text-stone-500'
@@ -246,7 +245,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
             </div>
           )}
 
-          {/* 1. NORMAL STATE GRID: Dual columns compact tiles matching exactly Kuro specs */}
+          {/* 1. NORMAL STATE GRID: Dual columns compact tiles */}
           {uiState === 'normal' && filteredItems.length > 0 && (
             <div id="food-grid-view" className="grid grid-cols-2 gap-2.5">
               {filteredItems.map(item => {
@@ -289,25 +288,28 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                         
                         <div>
                           {cartQty === 0 ? (
-                            <button
+                            <Button
                               onClick={() => addToCart(item)}
-                              className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-[11px] px-2.5 h-7 rounded-lg shadow-sm transition-all flex items-center gap-0.5 active:scale-95"
+                              variant="primary"
+                              size="xs"
+                              className="h-7 px-2.5"
                             >
-                              <span>+</span>
-                              <span>Add</span>
-                            </button>
+                              <span>+ Add</span>
+                            </Button>
                           ) : (
                             <div className="flex items-center bg-stone-100 rounded-lg p-0.5 border border-stone-200/80">
                               <button
+                                type="button"
                                 onClick={() => decrementItem(item.id)}
-                                className="w-6 h-6 rounded-md bg-white hover:bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold transition-colors shadow-xs active:scale-90"
+                                className="w-6 h-6 rounded-md bg-white hover:bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold transition-colors shadow-xs active:scale-90 cursor-pointer"
                               >
                                 −
                               </button>
                               <span className="px-1.5 min-w-[18px] text-center text-[11px] font-black text-stone-800">{cartQty}</span>
                               <button
+                                type="button"
                                 onClick={() => addToCart(item)}
-                                className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-xs font-bold transition-colors shadow-xs active:scale-90"
+                                className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-xs font-bold transition-colors shadow-xs active:scale-90 cursor-pointer"
                               >
                                 +
                               </button>
@@ -326,57 +328,30 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
           {/* 2. LOADING STATE: 4 Pulsing skeletal loaders */}
           {uiState === 'loading' && (
-            <div id="loading-skeleton-view" className="grid grid-cols-2 gap-2.5">
-              {[1, 2, 3, 4].map(idx => (
-                <div key={idx} className="bg-stone-50 border border-stone-200/80 rounded-xl overflow-hidden p-2 flex flex-col justify-between animate-pulse">
-                  <div className="w-full aspect-[4/3] bg-stone-200 rounded-lg mb-2"></div>
-                  <div className="h-3.5 bg-stone-200 rounded w-3/4 mb-1.5"></div>
-                  <div className="h-2.5 bg-stone-200 rounded w-1/2 mb-3"></div>
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="h-3.5 bg-stone-200 rounded w-10"></div>
-                    <div className="w-7 h-7 bg-stone-200 rounded-lg"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <LoadingState count={4} type="grid" />
           )}
 
           {/* 3. EMPTY STATE: Search empty results */}
           {(uiState === 'empty' || (uiState === 'normal' && filteredItems.length === 0)) && (
-            <div id="empty-search-view" className="flex flex-col items-center justify-center py-16 px-4 text-center">
-              <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 mb-3 border border-stone-200">
-                <Search className="w-6 h-6" />
-              </div>
-              <h3 className="font-extrabold text-stone-800 text-xs mb-1">No items found</h3>
-              <p className="text-[10px] text-stone-500 max-w-[200px] mb-4">We couldn't find anything matching your search. Try another query.</p>
-              <button
-                onClick={clearSearch}
-                className="text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 px-3.5 py-1.5 rounded-lg border border-orange-200/60 transition-colors"
-              >
-                Clear Search
-              </button>
-            </div>
+            <EmptyState
+              title="No items found"
+              description="We couldn't find anything matching your search. Try another query."
+              actionText="Clear Search"
+              onAction={clearSearch}
+            />
           )}
 
           {/* 4. ERROR STATE: Server connectivity error banner */}
           {uiState === 'error' && (
-            <div id="error-alert-view" className="flex flex-col items-center justify-center py-14 px-4 text-center">
-              <div className="w-14 h-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-3 border border-red-100">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <h3 className="font-extrabold text-stone-800 text-xs mb-1">Failed to load menu</h3>
-              <p className="text-[10px] text-stone-500 max-w-[220px] mb-4">Could not connect to table server. Please check connection and try again.</p>
-              <button
-                onClick={() => {
-                  setUiState('loading');
-                  setTimeout(() => setUiState('normal'), 800);
-                }}
-                className="text-xs font-bold text-white bg-stone-900 hover:bg-stone-800 px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Retry Loading</span>
-              </button>
-            </div>
+            <ErrorState
+              title="Failed to load menu"
+              message="Could not connect to table server. Please check connection and try again."
+              retryText="Retry Loading"
+              onRetry={() => {
+                setUiState('loading');
+                setTimeout(() => setUiState('normal'), 800);
+              }}
+            />
           )}
 
         </main>
@@ -408,16 +383,17 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
               </div>
 
               {/* Action Button */}
-              <button
+              <Button
+                variant="primary"
+                size="sm"
+                iconRight={<ArrowRight className="w-3 h-3 text-white font-extrabold" />}
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsCartOpen(true);
                 }}
-                className="bg-orange-600 hover:bg-orange-500 text-white font-extrabold text-[11px] py-2 px-3.5 rounded-xl flex items-center gap-1 transition-colors shadow-sm"
               >
-                <span>View Cart</span>
-                <ArrowRight className="w-3 h-3 text-white font-extrabold" />
-              </button>
+                View Cart
+              </Button>
 
             </div>
           </aside>
@@ -435,8 +411,9 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                   <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">{tableName} · Send to Kitchen</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsCartOpen(false)}
-                  className="p-1.5 rounded-lg text-stone-400 hover:bg-stone-100 active:scale-95"
+                  className="p-1.5 rounded-lg text-stone-400 hover:bg-stone-100 active:scale-95 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -459,15 +436,17 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                       <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="flex items-center bg-stone-100 rounded-lg p-0.5 border border-stone-200/80">
                           <button
+                            type="button"
                             onClick={() => decrementItem(cartItem.id)}
-                            className="w-6 h-6 rounded-md bg-white hover:bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold transition-colors"
+                            className="w-6 h-6 rounded-md bg-white hover:bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
                           >
                             −
                           </button>
                           <span className="px-1.5 min-w-[18px] text-center text-xs font-black text-stone-800">{cartItem.quantity}</span>
                           <button
+                            type="button"
                             onClick={() => addToCart({ id: cartItem.id, name: cartItem.name, image: cartItem.image, price: cartItem.unitPrice } as MenuItem)}
-                            className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-xs font-bold transition-colors"
+                            className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
                           >
                             +
                           </button>
@@ -486,13 +465,15 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                   <span className="text-stone-900 font-extrabold text-sm">{formatPrice(cartTotal)}</span>
                 </div>
                 
-                <button
+                <Button
                   onClick={handleKitchenSubmit}
-                  className="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 active:scale-95"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  iconRight={<Check className="w-4 h-4" />}
                 >
-                  <span>Send Order to Kitchen</span>
-                  <Check className="w-4 h-4" />
-                </button>
+                  Send Order to Kitchen
+                </Button>
               </div>
 
             </div>

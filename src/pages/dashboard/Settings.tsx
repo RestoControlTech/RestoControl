@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
-import { Sparkles, Save, CheckCircle2, CloudLightning } from 'lucide-react';
+import React, { useState } from 'react';
+import { Save, CheckCircle2, CloudLightning } from 'lucide-react';
+import { Button, Input, Select, Card, Badge } from '../../components/ui';
 
 export default function Settings() {
   const [activeSubTab, setActiveSubTab] = useState('profile');
@@ -50,14 +51,15 @@ export default function Settings() {
         {/* Left Side Settings navigation and telemetry column */}
         <div className="space-y-4 lg:col-span-1 shrink-0">
           
-          <div className="bg-white rounded-2xl border border-slate-100 p-2.5 space-y-1 shadow-xs">
+          <Card padding="sm" className="space-y-1">
             {subTabs.map(tab => {
               const isActive = activeSubTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveSubTab(tab.id)}
-                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
+                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer ${
                     isActive
                       ? 'bg-orange-50 text-orange-600'
                       : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -67,10 +69,10 @@ export default function Settings() {
                 </button>
               );
             })}
-          </div>
+          </Card>
 
           {/* Cloud Backup Status panel card */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-xs flex items-center gap-3.5">
+          <Card padding="md" className="flex items-center gap-3.5">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CloudLightning className="w-4 h-4" />
             </div>
@@ -78,7 +80,7 @@ export default function Settings() {
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Cloud Backup</p>
               <p className="text-[11px] font-extrabold text-slate-700 mt-1 leading-none">Today, 14:32</p>
             </div>
-          </div>
+          </Card>
 
         </div>
 
@@ -103,26 +105,30 @@ export default function Settings() {
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold text-slate-800 flex items-center gap-2">
                     <span>Kuro Bistro</span>
-                    <span className="inline-block text-[8px] font-black bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded leading-none">Active Branding</span>
+                    <Badge variant="orange" size="xs">
+                      Active Branding
+                    </Badge>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium mt-1 leading-none">PNG or SVG, max 2MB.</p>
                 </div>
                 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="xs"
                     onClick={() => alert('Launching Logo File Uploader...')}
-                    className="bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/60 py-1.5 px-3.5 rounded-lg text-[10px] font-black transition-colors active:scale-95"
                   >
                     Upload Logo
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="danger"
+                    size="xs"
                     onClick={() => alert('Removing active branding...')}
-                    className="text-red-500 hover:text-red-600 border border-red-100 hover:bg-red-50 py-1.5 px-3.5 rounded-lg text-[10px] font-black transition-colors active:scale-95"
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -132,53 +138,41 @@ export default function Settings() {
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Basic Details</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="rname" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Restaurant Name</label>
-                  <input
-                    id="rname"
-                    type="text"
-                    value={restaurantName}
-                    onChange={(e) => setRestaurantName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-orange-500 focus:bg-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="rphone" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
-                  <input
-                    id="rphone"
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-orange-500 focus:bg-white"
-                    required
-                  />
-                </div>
+                <Input
+                  label="Restaurant Name"
+                  id="rname"
+                  type="text"
+                  value={restaurantName}
+                  onChange={(e) => setRestaurantName(e.target.value)}
+                  required
+                />
+                <Input
+                  label="Phone Number"
+                  id="rphone"
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="raddress" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address</label>
-                  <input
-                    id="raddress"
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-orange-500 focus:bg-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="rhours" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Opening Hours</label>
-                  <input
-                    id="rhours"
-                    type="text"
-                    value={openingHours}
-                    onChange={(e) => setOpeningHours(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-orange-500 focus:bg-white"
-                    required
-                  />
-                </div>
+                <Input
+                  label="Address"
+                  id="raddress"
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  required
+                />
+                <Input
+                  label="Opening Hours"
+                  id="rhours"
+                  type="text"
+                  value={openingHours}
+                  onChange={(e) => setOpeningHours(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
@@ -187,35 +181,33 @@ export default function Settings() {
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Currency & Language</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="rlang" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Default Language</label>
-                  <select
-                    id="rlang"
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-orange-500 focus:bg-white"
-                  >
-                    <option value="en">English (US)</option>
-                    <option value="jp">Japanese (JP)</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="rcurr" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Primary Currency</label>
-                  <select
+                <Select
+                  label="Default Language"
+                  id="rlang"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  options={[
+                    { value: 'en', label: 'English (US)' },
+                    { value: 'jp', label: 'Japanese (JP)' },
+                  ]}
+                />
+                <div className="space-y-1">
+                  <Select
+                    label="Primary Currency"
                     id="rcurr"
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-3.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-orange-500 focus:bg-white"
-                  >
-                    <option value="USD">USD ($)</option>
-                    <option value="KHR">KHR (៛)</option>
-                  </select>
+                    options={[
+                      { value: 'USD', label: 'USD ($)' },
+                      { value: 'KHR', label: 'KHR (៛)' },
+                    ]}
+                  />
                   <p className="text-[10px] text-slate-400 font-bold leading-none pl-1">Exchange rate: 1 USD = 4,100 KHR</p>
                 </div>
               </div>
             </div>
 
-            {/* Save Changes bar matching bottom part of Image 17 */}
+            {/* Save Changes bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 pt-4 gap-3">
               
               {/* Save status notification */}
@@ -225,14 +217,15 @@ export default function Settings() {
               </div>
 
               {/* Submit Save changes button */}
-              <button
+              <Button
                 type="submit"
-                disabled={isSaving}
-                className="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs py-2.5 px-5 rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                variant="primary"
+                size="md"
+                isLoading={isSaving}
+                icon={<Save className="w-4 h-4" />}
               >
-                <Save className="w-4 h-4" />
-                <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
-              </button>
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
 
             </div>
 

@@ -19,6 +19,7 @@ import {
   Terminal
 } from 'lucide-react';
 import { DashboardTab } from '../types';
+import { SearchBar } from '../components/ui';
 
 interface DashboardLayoutProps {
   activeTab: DashboardTab;
@@ -151,15 +152,11 @@ export default function DashboardLayout({
         <header id="top-bar-header" className="h-[70px] bg-white border-b border-slate-100 px-6 shrink-0 flex items-center justify-between sticky top-0 z-20">
           
           {/* Dynamic Search Box */}
-          <div className="w-full max-w-[420px] relative flex items-center">
-            <Search className="w-4 h-4 absolute left-3.5 text-slate-400 pointer-events-none" />
-            <input 
-              id="top-bar-search-input"
-              type="text"
-              placeholder="Search orders, menu, or bills..."
+          <div className="w-full max-w-[420px]">
+            <SearchBar
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/10 focus:bg-white focus:border-slate-200 transition-all"
+              onChange={setSearchQuery}
+              placeholder="Search orders, menu, or bills..."
             />
           </div>
 
