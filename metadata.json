@@ -1,0 +1,6 @@
+{
+  "name": "Kuro Bistro POS",
+  "description": "An interactive high-throughput restaurant POS workstation and customer-facing QR ordering menu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
