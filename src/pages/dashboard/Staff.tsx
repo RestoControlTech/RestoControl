@@ -23,6 +23,7 @@ import {
   TableCell,
   TableHeaderCell,
 } from '../../components/ui';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 interface StaffProps {
   staffList: StaffMember[];
@@ -123,14 +124,16 @@ export default function Staff({ staffList, onToggleShift, onAddStaff, onEditStaf
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Staff Management</h2>
           <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Manage team members, security roles, and active shift statuses.</p>
         </div>
-        <Button
-          onClick={() => setShowAddModal(true)}
-          icon={<Plus className="w-4 h-4" />}
-          variant="primary"
-          size="md"
-        >
-          Add Staff
-        </Button>
+        <PermissionGate permission="staff.manage">
+          <Button
+            onClick={() => setShowAddModal(true)}
+            icon={<Plus className="w-4 h-4" />}
+            variant="primary"
+            size="md"
+          >
+            Add Staff
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* KPI stats counter panels */}
@@ -239,34 +242,46 @@ export default function Staff({ staffList, onToggleShift, onAddStaff, onEditStaf
 
                 {/* Duty Shift status circle badge */}
                 <TableCell>
-                  <button
-                    type="button"
-                    onClick={() => onToggleShift(member.id)}
-                    title="Click to toggle Shift Duty"
-                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-tight active:scale-95 transition-all cursor-pointer ${
-                      isActive 
-                        ? 'text-emerald-600 hover:bg-emerald-50' 
-                        : 'text-slate-400 hover:bg-slate-100'
-                    }`}
+                  <PermissionGate
+                    permission="staff.manage"
+                    fallback={
+                      <span className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-extrabold tracking-tight text-slate-400">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
+                        <span>{member.status}</span>
+                      </span>
+                    }
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 ring-2 ring-emerald-100' : 'bg-slate-300'}`}></span>
-                    <span>{member.status}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onToggleShift(member.id)}
+                      title="Click to toggle Shift Duty"
+                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-tight active:scale-95 transition-all cursor-pointer ${
+                        isActive 
+                          ? 'text-emerald-600 hover:bg-emerald-50' 
+                          : 'text-slate-400 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500 ring-2 ring-emerald-100' : 'bg-slate-300'}`}></span>
+                      <span>{member.status}</span>
+                    </button>
+                  </PermissionGate>
                 </TableCell>
 
                 {/* CTA Edit status row */}
                 <TableCell className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingStaff(member);
-                      setEditName(member.name);
-                    }}
-                    className="text-slate-400 hover:text-orange-600 font-bold p-1 rounded-lg hover:bg-slate-50 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>Edit</span>
-                  </button>
+                  <PermissionGate permission="staff.manage">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingStaff(member);
+                        setEditName(member.name);
+                      }}
+                      className="text-slate-400 hover:text-orange-600 font-bold p-1 rounded-lg hover:bg-slate-50 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                  </PermissionGate>
                 </TableCell>
 
               </TableRow>

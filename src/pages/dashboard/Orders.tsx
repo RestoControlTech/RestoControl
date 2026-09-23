@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Play, CheckCircle, Trash, ShoppingBag, Clock } from 'lucide-react';
 import { formatPrice } from '../../utils/format';
 import { Button, Badge, BadgeVariant, Card, ConfirmDialog } from '../../components/ui';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 export default function Orders() {
   const [orders, setOrders] = useState([
@@ -120,14 +121,16 @@ export default function Orders() {
                     Deliver
                   </Button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setOrderToVoid(order.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90 cursor-pointer"
-                  title="Void order ticket"
-                >
-                  <Trash className="w-3.5 h-3.5" />
-                </button>
+                <PermissionGate permission="orders.cancel">
+                  <button
+                    type="button"
+                    onClick={() => setOrderToVoid(order.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90 cursor-pointer"
+                    title="Void order ticket"
+                  >
+                    <Trash className="w-3.5 h-3.5" />
+                  </button>
+                </PermissionGate>
               </div>
             </div>
 

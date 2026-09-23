@@ -111,7 +111,7 @@ function AppContent() {
       {/* Public Route: Login */}
       <Route path="/login" element={<Login />} />
 
-      {/* Public Route: Customer QR Menu */}
+      {/* Public Routes: Customer QR Menu */}
       <Route
         path="/customer"
         element={
@@ -132,12 +132,31 @@ function AppContent() {
         }
       />
       <Route path="/qr" element={<Navigate to="/customer" replace />} />
+      <Route
+        path="/menu/:tableId"
+        element={
+          <div id="client-app-root" className="relative">
+            <div
+              className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
+              onClick={() => navigate('/dashboard')}
+            >
+              <span>← Back to POS Station</span>
+            </div>
+            <QRMenu
+              initialMenuItems={menuItems}
+              categories={CATEGORIES}
+              tableName={activeTableQRName}
+              onSendOrderToKitchen={handleSendOrderToKitchen}
+            />
+          </div>
+        }
+      />
 
-      {/* Protected Routes (Require Authentication) */}
+      {/* Protected Routes (Require Authentication & Permission Authorization) */}
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="dashboard.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -152,7 +171,7 @@ function AppContent() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="dashboard.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -167,7 +186,7 @@ function AppContent() {
       <Route
         path="/pos"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="pos.use">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -182,7 +201,7 @@ function AppContent() {
       <Route
         path="/orders"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="orders.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -197,7 +216,7 @@ function AppContent() {
       <Route
         path="/tables"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="tables.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -217,7 +236,7 @@ function AppContent() {
       <Route
         path="/menu"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="menu.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -238,7 +257,7 @@ function AppContent() {
       <Route
         path="/staff"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="staff.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -259,7 +278,7 @@ function AppContent() {
       <Route
         path="/sales"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="sales.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -277,7 +296,7 @@ function AppContent() {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="reports.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -292,7 +311,7 @@ function AppContent() {
       <Route
         path="/settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="settings.view">
             <DashboardLayout
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}

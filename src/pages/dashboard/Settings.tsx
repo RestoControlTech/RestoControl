@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Save, CheckCircle2, CloudLightning } from 'lucide-react';
 import { Button, Input, Select, Card, Badge } from '../../components/ui';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 export default function Settings() {
   const [activeSubTab, setActiveSubTab] = useState('profile');
@@ -112,24 +113,26 @@ export default function Settings() {
                   <p className="text-[10px] text-slate-400 font-medium mt-1 leading-none">PNG or SVG, max 2MB.</p>
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={() => alert('Launching Logo File Uploader...')}
-                  >
-                    Upload Logo
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="xs"
-                    onClick={() => alert('Removing active branding...')}
-                  >
-                    Remove
-                  </Button>
-                </div>
+                <PermissionGate permission="settings.manage">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => alert('Launching Logo File Uploader...')}
+                    >
+                      Upload Logo
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="xs"
+                      onClick={() => alert('Removing active branding...')}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </PermissionGate>
               </div>
             </div>
 
@@ -217,15 +220,17 @@ export default function Settings() {
               </div>
 
               {/* Submit Save changes button */}
-              <Button
-                type="submit"
-                variant="primary"
-                size="md"
-                isLoading={isSaving}
-                icon={<Save className="w-4 h-4" />}
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
+              <PermissionGate permission="settings.manage">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  isLoading={isSaving}
+                  icon={<Save className="w-4 h-4" />}
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </PermissionGate>
 
             </div>
 

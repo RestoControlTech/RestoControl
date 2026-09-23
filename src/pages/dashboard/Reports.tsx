@@ -6,6 +6,7 @@
 import React from 'react';
 import { FileBarChart, Download, TrendingUp, DollarSign, Users, ShoppingBag } from 'lucide-react';
 import { Button, Card } from '../../components/ui';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 import { formatPrice } from '../../utils/format';
 
 export default function Reports() {
@@ -16,14 +17,16 @@ export default function Reports() {
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Financial & Operations Reports</h2>
           <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Comprehensive bistro metrics, revenue reports, and audit logs.</p>
         </div>
-        <Button
-          variant="primary"
-          size="md"
-          icon={<Download className="w-4 h-4" />}
-          onClick={() => alert('Generating full PDF audit report...')}
-        >
-          Export Report
-        </Button>
+        <PermissionGate permission="reports.view">
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Download className="w-4 h-4" />}
+            onClick={() => alert('Generating full PDF audit report...')}
+          >
+            Export Report
+          </Button>
+        </PermissionGate>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
