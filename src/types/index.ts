@@ -35,6 +35,22 @@ export interface MenuItem {
   rating?: number;
 }
 
+export type ProductCategory = 'Popular' | 'Noodles' | 'Mains & Sushi' | 'Appetizers' | 'Drinks';
+
+export interface Product {
+  id: string;
+  name: string;
+  jpName?: string;
+  category: ProductCategory | string;
+  price: number;
+  image: string;
+  description: string;
+  available: boolean;
+  popular: boolean;
+  stock: number;
+  badge?: string | null;
+}
+
 export interface Category {
   id: string;
   label: string;
@@ -43,10 +59,13 @@ export interface Category {
 
 export interface CartItem {
   id: string;
+  productId: string;
   name: string;
-  image: string;
+  price: number;
   unitPrice: number;
   quantity: number;
+  image: string;
+  lineTotal: number;
 }
 
 export interface Table {
@@ -80,3 +99,46 @@ export interface Transaction {
 export type AppView = 'customer-qr' | 'dashboard';
 
 export type DashboardTab = 'dashboard' | 'pos' | 'orders' | 'menu' | 'tables' | 'sales' | 'staff' | 'reports' | 'settings';
+
+export type OrderType = 'Dine In' | 'Takeaway' | 'Delivery';
+
+export type OrderStatus = 'Draft' | 'Pending' | 'Preparing' | 'Ready' | 'Completed' | 'Cancelled';
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+}
+
+export interface OrderDraft {
+  tableId?: string;
+  tableName?: string;
+  orderType?: OrderType;
+  customerId?: string;
+  customerName?: string;
+  note: string;
+  status: OrderStatus;
+  items: CartItem[];
+  subtotal: number;
+  tax?: number;
+  serviceCharge?: number;
+  total: number;
+}
+
+export type PaymentMethod = 'cash' | 'card' | 'qr';
+
+export type PaymentStatus = 'idle' | 'processing' | 'success' | 'failed';
+
+export type PaymentCurrency = 'USD' | 'KHR';
+
+export interface PaymentConfirmation {
+  orderNumber: string;
+  method: PaymentMethod;
+  currency: PaymentCurrency;
+  amount: number;
+  currencyAmount: number;
+  cashReceived?: number;
+  change?: number;
+  tableName?: string;
+  timestamp: string;
+}

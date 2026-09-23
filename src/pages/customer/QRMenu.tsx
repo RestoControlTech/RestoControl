@@ -30,24 +30,33 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   const [cart, setCart] = useState<Record<string, CartItem>>({
     'food-2': {
       id: 'food-2',
+      productId: 'food-2',
       name: 'Spicy Salmon Roll',
       image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&auto=format&fit=crop&q=80',
+      price: 8.50,
       unitPrice: 8.50,
-      quantity: 1
+      quantity: 1,
+      lineTotal: 8.50,
     },
     'food-7': {
       id: 'food-7',
+      productId: 'food-7',
       name: 'Pork Gyoza 5pc',
       image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400&auto=format&fit=crop&q=80',
+      price: 6.50,
       unitPrice: 6.50,
-      quantity: 1
+      quantity: 1,
+      lineTotal: 6.50,
     },
     'food-10': {
       id: 'food-10',
+      productId: 'food-10',
       name: 'Yuzu Soda',
       image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&auto=format&fit=crop&q=80',
+      price: 3.50,
       unitPrice: 3.50,
-      quantity: 1
+      quantity: 1,
+      lineTotal: 3.50,
     }
   });
 
@@ -60,7 +69,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   }, [cart]);
 
   const cartTotal = useMemo(() => {
-    return Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    return Object.values(cart).reduce((sum, item) => sum + ((item.price || item.unitPrice || 0) * item.quantity), 0);
   }, [cart]);
 
   // Toast feedback helper
@@ -74,14 +83,22 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
     setCart(prev => {
       const next = { ...prev };
       if (next[item.id]) {
-        next[item.id] = { ...next[item.id], quantity: next[item.id].quantity + 1 };
+        const nextQty = next[item.id].quantity + 1;
+        next[item.id] = { 
+          ...next[item.id], 
+          quantity: nextQty,
+          lineTotal: next[item.id].price * nextQty
+        };
       } else {
         next[item.id] = {
           id: item.id,
+          productId: item.id,
           name: item.name,
           image: item.image,
+          price: item.price,
           unitPrice: item.price,
-          quantity: 1
+          quantity: 1,
+          lineTotal: item.price,
         };
       }
       return next;

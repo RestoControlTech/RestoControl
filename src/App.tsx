@@ -22,6 +22,7 @@ import Sales from './pages/dashboard/Sales';
 import Reports from './pages/dashboard/Reports';
 import Settings from './pages/dashboard/Settings';
 import Orders from './pages/dashboard/Orders';
+import POS from './pages/dashboard/POS';
 import QRMenu from './pages/customer/QRMenu';
 
 function AppContent() {
@@ -192,7 +193,7 @@ function AppContent() {
               setSearchQuery={setSearchQuery}
               onSwitchToCustomerView={() => navigate('/customer')}
             >
-              <DashboardMain />
+              <POS searchQuery={searchQuery} />
             </DashboardLayout>
           </ProtectedRoute>
         }
