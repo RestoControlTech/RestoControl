@@ -102,7 +102,17 @@ export type DashboardTab = 'dashboard' | 'pos' | 'orders' | 'menu' | 'tables' | 
 
 export type OrderType = 'Dine In' | 'Takeaway' | 'Delivery';
 
-export type OrderStatus = 'Draft' | 'Pending' | 'Preparing' | 'Ready' | 'Completed' | 'Cancelled';
+export type OrderStatus = 'Draft' | 'Pending' | 'Preparing' | 'Cooking' | 'Ready' | 'Served' | 'Completed' | 'Cancelled';
+
+export type PaymentStatusType = 'Paid' | 'Pending' | 'Unpaid' | 'Refunded';
+
+export interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+}
 
 export interface Customer {
   id: string;
@@ -110,7 +120,23 @@ export interface Customer {
   phone?: string;
 }
 
+export interface Order {
+  id: string;
+  orderNumber: string;
+  table: string;
+  customer: string;
+  orderType: OrderType;
+  items: OrderItem[];
+  itemsSummary?: string;
+  total: number;
+  paymentStatus: PaymentStatusType;
+  status: OrderStatus;
+  dateTime: string;
+  note?: string;
+}
+
 export interface OrderDraft {
+  orderNumber?: string;
   tableId?: string;
   tableName?: string;
   orderType?: OrderType;

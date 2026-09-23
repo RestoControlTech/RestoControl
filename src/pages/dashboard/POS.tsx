@@ -5,8 +5,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Sparkles, Utensils, X } from 'lucide-react';
-import { Product, CartItem, OrderStatus, OrderDraft, PaymentConfirmation } from '../../types';
+import { Product, CartItem, OrderStatus, OrderDraft, PaymentConfirmation, Order } from '../../types';
 import { PRODUCTS } from '../../data/products';
+import { MOCK_ORDERS } from '../../data/orders';
 import { TABLES_DATA } from '../../data/mockData';
 import { Tabs, SearchBar, Button } from '../../components/ui';
 import { ProductGrid, TicketPanel, PaymentModal } from '../../components/pos';
@@ -14,17 +15,21 @@ import { ProductGrid, TicketPanel, PaymentModal } from '../../components/pos';
 export interface POSProps {
   products?: Product[];
   searchQuery?: string;
+  orders?: Order[];
   onSelectProduct?: (product: Product) => void;
   onOrderChange?: (draft: OrderDraft) => void;
   onPaymentComplete?: (confirmation: PaymentConfirmation) => void;
+  onOrderCreate?: (order: Order) => void;
 }
 
 export default function POS({
   products = PRODUCTS,
   searchQuery: externalSearch = '',
+  orders = MOCK_ORDERS,
   onSelectProduct,
   onOrderChange,
   onPaymentComplete,
+  onOrderCreate,
 }: POSProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [localSearch, setLocalSearch] = useState<string>('');
@@ -40,6 +45,15 @@ export default function POS({
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
 
+  // Compute next order number
+  const nextOrderNumber = useMemo(() => {
+    const highestNum = orders.reduce((max, o) => {
+      const num = parseInt(o.orderNumber.replace('#', ''), 10);
+      return !isNaN(num) && num > max ? num : max;
+    }, 1026);
+    return `#${highestNum + 1}`;
+  }, [orders]);
+
   // Derived OrderDraft object (Subtotal = Total, No Tax, No Service Charge)
   const orderDraft: OrderDraft = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.lineTotal, 0);
@@ -49,6 +63,7 @@ export default function POS({
     const table = TABLES_DATA.find((t) => t.id === selectedTableId);
 
     return {
+      orderNumber: nextOrderNumber,
       tableId: selectedTableId,
       tableName: table?.name || `Table ${selectedTableId}`,
       note: orderNote,
@@ -59,7 +74,7 @@ export default function POS({
       serviceCharge,
       total,
     };
-  }, [cart, selectedTableId, orderNote, orderStatus]);
+  }, [cart, selectedTableId, orderNote, orderStatus, nextOrderNumber]);
 
   // Combine local search bar with global search query if provided
   const activeSearch = (localSearch || externalSearch).trim().toLowerCase();
@@ -367,6 +382,38 @@ export default function POS({
         onClose={() => setIsPaymentModalOpen(false)}
         orderDraft={orderDraft}
         onPaymentSuccess={(confirmation) => {
+          const finalOrderNum =
+            confirmation.orderNumber && !confirmation.orderNumber.startsWith('#TEMP')
+              ? confirmation.orderNumber
+              : nextOrderNumber;
+
+          // Align confirmation order reference
+          confirmation.orderNumber = finalOrderNum;
+
+          const now = new Date();
+          const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          const newOrder: Order = {
+            id: `ord-${Date.now()}`,
+            orderNumber: finalOrderNum,
+            table: orderDraft.tableName || 'Table 01',
+            customer: orderDraft.customerName || orderDraft.tableName || 'Walk-in Customer',
+            orderType: orderDraft.orderType || 'Dine In',
+            items: orderDraft.items.map((item) => ({
+              id: item.id || item.productId,
+              name: item.name,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice || item.price,
+              lineTotal: item.lineTotal,
+            })),
+            total: orderDraft.total,
+            paymentStatus: 'Paid',
+            status: orderDraft.status === 'Draft' ? 'Preparing' : orderDraft.status,
+            dateTime: `Today, ${timeStr}`,
+            note: orderDraft.note || undefined,
+          };
+
+          onOrderCreate?.(newOrder);
           onPaymentComplete?.(confirmation);
         }}
         onResetOrder={() => {

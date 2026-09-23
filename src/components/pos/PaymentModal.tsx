@@ -84,7 +84,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
     setStatus('processing');
 
-    const tempOrderNum = `#TEMP-${Math.floor(100 + Math.random() * 900)}`;
+    const tempOrderNum = orderDraft.orderNumber || `#1027`;
     const confirmData: PaymentConfirmation = {
       orderNumber: tempOrderNum,
       method,
