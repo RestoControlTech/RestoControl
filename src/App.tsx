@@ -5,8 +5,9 @@
 
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { MenuItem, Table, StaffMember, Transaction } from './types';
+import { MenuItem, Table, StaffMember, Transaction, Order } from './types';
 import { MENU_ITEMS, CATEGORIES, TABLES_DATA, STAFF_DATA, TRANSACTIONS_DATA } from './data/mockData';
+import { MOCK_ORDERS } from './data/orders';
 
 // Auth and Route Protection
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -22,6 +23,7 @@ import Sales from './pages/dashboard/Sales';
 import Reports from './pages/dashboard/Reports';
 import Settings from './pages/dashboard/Settings';
 import Orders from './pages/dashboard/Orders';
+import POS from './pages/dashboard/POS';
 import QRMenu from './pages/customer/QRMenu';
 
 function AppContent() {
@@ -32,6 +34,29 @@ function AppContent() {
   const [tables, setTables] = useState<Table[]>(TABLES_DATA);
   const [staffList, setStaffList] = useState<StaffMember[]>(STAFF_DATA);
   const [transactions, setTransactions] = useState<Transaction[]>(TRANSACTIONS_DATA);
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+
+  // Handle creating order from POS
+  const handleOrderCreate = (newOrder: Order) => {
+    setOrders((prev) => [newOrder, ...prev]);
+
+    // Update table status to occupied if applicable
+    setTables((prev) =>
+      prev.map((t) => (t.name === newOrder.table ? { ...t, status: 'Occupied' } : t))
+    );
+
+    // Create sales transaction record
+    const newTx: Transaction = {
+      id: `tx-${Date.now()}`,
+      orderNumber: newOrder.orderNumber,
+      dateTime: 'Just Now',
+      table: newOrder.table,
+      type: newOrder.orderType === 'Takeaway' ? 'Takeaway' : 'Dine-in',
+      amount: newOrder.total,
+      status: 'Receipt',
+    };
+    setTransactions((prev) => [newTx, ...prev]);
+  };
   
   // App routing search filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -192,7 +217,11 @@ function AppContent() {
               setSearchQuery={setSearchQuery}
               onSwitchToCustomerView={() => navigate('/customer')}
             >
-              <DashboardMain />
+              <POS
+                searchQuery={searchQuery}
+                orders={orders}
+                onOrderCreate={handleOrderCreate}
+              />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -207,7 +236,10 @@ function AppContent() {
               setSearchQuery={setSearchQuery}
               onSwitchToCustomerView={() => navigate('/customer')}
             >
-              <Orders />
+              <Orders
+                orders={orders}
+                onUpdateOrders={setOrders}
+              />
             </DashboardLayout>
           </ProtectedRoute>
         }

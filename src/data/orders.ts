@@ -1,0 +1,110 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Order } from '../types';
+
+export const MOCK_ORDERS: Order[] = [
+  {
+    id: 'ord-1026',
+    orderNumber: '#1026',
+    table: 'Table 04',
+    customer: 'Walk-in Customer',
+    orderType: 'Dine In',
+    items: [
+      { id: 'prod-1', name: 'Tonkotsu Ramen', quantity: 1, unitPrice: 13.50, lineTotal: 13.50 },
+      { id: 'prod-2', name: 'Spicy Salmon Roll', quantity: 1, unitPrice: 8.50, lineTotal: 8.50 },
+      { id: 'prod-10', name: 'Yuzu Soda', quantity: 1, unitPrice: 3.50, lineTotal: 3.50 },
+    ],
+    itemsSummary: 'Tonkotsu Ramen x1, Spicy Salmon Roll x1, Yuzu Soda x1',
+    total: 25.50,
+    paymentStatus: 'Paid',
+    status: 'Preparing',
+    dateTime: 'Today, 19:42',
+    note: 'Less spicy',
+  },
+  {
+    id: 'ord-1025',
+    orderNumber: '#1025',
+    table: 'Table 01',
+    customer: 'Dara',
+    orderType: 'Dine In',
+    items: [
+      { id: 'prod-7', name: 'Pork Gyoza 5pc', quantity: 1, unitPrice: 6.50, lineTotal: 6.50 },
+      { id: 'prod-3', name: 'Black Garlic Miso', quantity: 1, unitPrice: 14.00, lineTotal: 14.00 },
+      { id: 'prod-11', name: 'Matcha Iced Latte', quantity: 1, unitPrice: 5.50, lineTotal: 5.50 },
+    ],
+    itemsSummary: 'Pork Gyoza 5pc x1, Black Garlic Miso x1, Matcha Iced Latte x1',
+    total: 26.00,
+    paymentStatus: 'Paid',
+    status: 'Cooking',
+    dateTime: 'Today, 19:35',
+  },
+  {
+    id: 'ord-1024',
+    orderNumber: '#1024',
+    table: 'Table 03',
+    customer: 'Sokha',
+    orderType: 'Dine In',
+    items: [
+      { id: 'prod-5', name: 'Tuna Nigiri 2pc', quantity: 2, unitPrice: 7.00, lineTotal: 14.00 },
+      { id: 'prod-6', name: 'Crispy Tempura Roll', quantity: 1, unitPrice: 9.00, lineTotal: 9.00 },
+      { id: 'prod-4', name: 'Shoyu Chicken Ramen', quantity: 1, unitPrice: 12.50, lineTotal: 12.50 },
+    ],
+    itemsSummary: 'Tuna Nigiri 2pc x2, Crispy Tempura Roll x1, Shoyu Chicken Ramen x1',
+    total: 35.50,
+    paymentStatus: 'Paid',
+    status: 'Ready',
+    dateTime: 'Today, 19:18',
+  },
+  {
+    id: 'ord-1023',
+    orderNumber: '#1023',
+    table: 'Table 05',
+    customer: 'Customer 001',
+    orderType: 'Dine In',
+    items: [
+      { id: 'prod-8', name: 'Sea Salt Edamame', quantity: 1, unitPrice: 4.50, lineTotal: 4.50 },
+      { id: 'prod-1', name: 'Tonkotsu Ramen', quantity: 2, unitPrice: 13.50, lineTotal: 27.00 },
+      { id: 'prod-11', name: 'Matcha Iced Latte', quantity: 2, unitPrice: 5.50, lineTotal: 11.00 },
+    ],
+    itemsSummary: 'Sea Salt Edamame x1, Tonkotsu Ramen x2, Matcha Iced Latte x2',
+    total: 42.50,
+    paymentStatus: 'Paid',
+    status: 'Served',
+    dateTime: 'Today, 18:52',
+  },
+  {
+    id: 'ord-1022',
+    orderNumber: '#1022',
+    table: 'Table 08',
+    customer: 'Walk-in Customer',
+    orderType: 'Dine In',
+    items: [
+      { id: 'prod-7', name: 'Pork Gyoza 5pc', quantity: 3, unitPrice: 6.50, lineTotal: 19.50 },
+      { id: 'prod-10', name: 'Yuzu Soda', quantity: 4, unitPrice: 3.50, lineTotal: 14.00 },
+    ],
+    itemsSummary: 'Pork Gyoza 5pc x3, Yuzu Soda x4',
+    total: 33.50,
+    paymentStatus: 'Paid',
+    status: 'Completed',
+    dateTime: 'Today, 18:31',
+  },
+  {
+    id: 'ord-1021',
+    orderNumber: '#1021',
+    table: 'Table 02',
+    customer: 'Walk-in Customer',
+    orderType: 'Dine In',
+    items: [
+      { id: 'prod-9', name: 'Chashu Don Bowl', quantity: 2, unitPrice: 11.00, lineTotal: 22.00 },
+      { id: 'prod-10', name: 'Yuzu Soda', quantity: 2, unitPrice: 3.50, lineTotal: 7.00 },
+    ],
+    itemsSummary: 'Chashu Don Bowl x2, Yuzu Soda x2',
+    total: 29.00,
+    paymentStatus: 'Pending',
+    status: 'Pending',
+    dateTime: 'Today, 18:14',
+  },
+];

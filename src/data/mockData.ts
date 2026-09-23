@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { MenuItem, Category, Table, StaffMember, Transaction } from '../types';
+import { MenuItem, Category, Table, StaffMember, Transaction, Customer } from '../types';
 
 export const MENU_ITEMS: MenuItem[] = [
   {
@@ -192,4 +192,12 @@ export const TRANSACTIONS_DATA: Transaction[] = [
   { id: 'tx5', orderNumber: '#TX-9038', dateTime: 'Oct 24, 18:31', table: 'Table 07', type: 'Dine-in', amount: 42.00, status: 'Receipt' },
   { id: 'tx6', orderNumber: '#TX-9037', dateTime: 'Oct 24, 18:14', table: 'Table 02', type: 'Dine-in', amount: 26.50, status: 'Receipt' },
   { id: 'tx7', orderNumber: '#TX-9036', dateTime: 'Oct 24, 17:58', table: 'Pickup', type: 'Takeaway', amount: 68.00, status: 'Receipt' }
+];
+
+export const CUSTOMERS_DATA: Customer[] = [
+  { id: 'c-walkin', name: 'Walk-in Customer' },
+  { id: 'c-dara', name: 'Dara', phone: '+855 12 345 678' },
+  { id: 'c-sokha', name: 'Sokha', phone: '+855 77 890 123' },
+  { id: 'c-001', name: 'Customer 001', phone: '+855 98 765 432' },
+  { id: 'c-elena', name: 'Elena Vance', phone: '+1 555-0192' }
 ];
