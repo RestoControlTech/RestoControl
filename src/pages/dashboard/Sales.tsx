@@ -21,6 +21,7 @@ import {
   TableHeaderCell,
   Modal,
 } from '../../components/ui';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 interface SalesProps {
   transactions: Transaction[];
@@ -59,14 +60,16 @@ export default function Sales({ transactions, searchQuery }: SalesProps) {
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Sales History</h2>
           <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Historical transactions, payment summaries, and daily receipts.</p>
         </div>
-        <Button
-          onClick={() => alert('Compiling CSV logs. Downloading Sales Summary Report...')}
-          icon={<Download className="w-4 h-4" />}
-          variant="primary"
-          size="md"
-        >
-          Export CSV
-        </Button>
+        <PermissionGate permission="sales.view">
+          <Button
+            onClick={() => alert('Compiling CSV logs. Downloading Sales Summary Report...')}
+            icon={<Download className="w-4 h-4" />}
+            variant="primary"
+            size="md"
+          >
+            Export CSV
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Stats analytics panels */}

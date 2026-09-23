@@ -5,6 +5,8 @@
 
 export type Role = 'admin' | 'staff';
 
+export type { Permission } from '../auth/permissions';
+
 export interface User {
   id: string;
   name: string;

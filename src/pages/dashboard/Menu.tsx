@@ -18,6 +18,7 @@ import {
   Card,
   ConfirmDialog,
 } from '../../components/ui';
+import { PermissionGate } from '../../components/auth/PermissionGate';
 
 interface MenuProps {
   menuItems: MenuItem[];
@@ -105,14 +106,16 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Menu Management</h2>
           <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Toggle stock levels, adjust item prices, and organize dishes.</p>
         </div>
-        <Button
-          onClick={() => setShowAddModal(true)}
-          icon={<Plus className="w-4 h-4" />}
-          variant="primary"
-          size="md"
-        >
-          Add Menu Item
-        </Button>
+        <PermissionGate permission="products.create">
+          <Button
+            onClick={() => setShowAddModal(true)}
+            icon={<Plus className="w-4 h-4" />}
+            variant="primary"
+            size="md"
+          >
+            Add Menu Item
+          </Button>
+        </PermissionGate>
       </div>
 
       {/* Row containing horizontal categories and custom code filter */}
@@ -193,21 +196,25 @@ export default function Menu({ menuItems, onToggleStock, onAddItem, onDeleteItem
 
                 <div className="flex items-center gap-1.5">
                   {/* Switch stock level button */}
-                  <Button
-                    onClick={() => onToggleStock(item.id)}
-                    variant={item.inStock ? 'secondary' : 'subtle-orange'}
-                    size="xs"
-                  >
-                    Toggle Stock
-                  </Button>
+                  <PermissionGate permission="products.update">
+                    <Button
+                      onClick={() => onToggleStock(item.id)}
+                      variant={item.inStock ? 'secondary' : 'subtle-orange'}
+                      size="xs"
+                    >
+                      Toggle Stock
+                    </Button>
+                  </PermissionGate>
                   {/* Delete button */}
-                  <button
-                    onClick={() => setItemToDelete(item.id)}
-                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90 cursor-pointer"
-                    title="Delete item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <PermissionGate permission="products.delete">
+                    <button
+                      onClick={() => setItemToDelete(item.id)}
+                      className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-90 cursor-pointer"
+                      title="Delete item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </PermissionGate>
                 </div>
               </div>
 

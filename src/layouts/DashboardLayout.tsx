@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
+  PlusCircle,
   Utensils, 
   QrCode, 
   History, 
@@ -19,9 +20,31 @@ import {
   Terminal,
   FileBarChart
 } from 'lucide-react';
-import { DashboardTab } from '../types';
+import { DashboardTab, Permission } from '../types';
 import { SearchBar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
+import { usePermission } from '../hooks/usePermission';
+
+export interface NavItemConfig {
+  id: DashboardTab;
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: number;
+  permission: Permission;
+}
+
+export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
+  { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+  { id: 'pos', path: '/pos', label: 'New Order', icon: PlusCircle, permission: 'pos.use' },
+  { id: 'orders', path: '/orders', label: 'Orders', icon: ShoppingBag, badge: 5, permission: 'orders.view' },
+  { id: 'menu', path: '/menu', label: 'Menu', icon: Utensils, permission: 'menu.view' },
+  { id: 'tables', path: '/tables', label: 'Tables & QR', icon: QrCode, permission: 'tables.view' },
+  { id: 'sales', path: '/sales', label: 'Sales History', icon: History, permission: 'sales.view' },
+  { id: 'staff', path: '/staff', label: 'Staff', icon: Users, permission: 'staff.view' },
+  { id: 'reports', path: '/reports', label: 'Reports', icon: FileBarChart, permission: 'reports.view' },
+  { id: 'settings', path: '/settings', label: 'Settings', icon: Settings, permission: 'settings.view' },
+];
 
 interface DashboardLayoutProps {
   activeTab?: DashboardTab;
@@ -47,25 +70,20 @@ export default function DashboardLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, logout: authLogout } = useAuth();
+  const { hasPermission } = usePermission();
 
   const currentUser = authUser
     ? { name: authUser.name, role: authUser.role === 'admin' ? 'Administrator' : 'Staff Member' }
     : propUser || { name: 'Staff User', role: 'Staff' };
 
-  const navItems = [
-    { id: 'dashboard' as DashboardTab, path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'orders' as DashboardTab, path: '/orders', label: 'Orders', icon: ShoppingBag, badge: 5 },
-    { id: 'menu' as DashboardTab, path: '/menu', label: 'Menu', icon: Utensils },
-    { id: 'tables' as DashboardTab, path: '/tables', label: 'Tables & QR', icon: QrCode },
-    { id: 'sales' as DashboardTab, path: '/sales', label: 'Sales History', icon: History },
-    { id: 'staff' as DashboardTab, path: '/staff', label: 'Staff', icon: Users },
-    { id: 'reports' as DashboardTab, path: '/reports', label: 'Reports', icon: FileBarChart },
-    { id: 'settings' as DashboardTab, path: '/settings', label: 'Settings', icon: Settings },
-  ];
+  // Filter navigation items based on centralized permission authorization
+  const visibleNavItems = SIDEBAR_NAV_ITEMS.filter((item) =>
+    !item.permission || hasPermission(item.permission)
+  );
 
   const currentPath = location.pathname;
 
-  const handleNavClick = (item: typeof navItems[0]) => {
+  const handleNavClick = (item: NavItemConfig) => {
     if (setActiveTab) {
       setActiveTab(item.id);
     }
@@ -121,9 +139,9 @@ export default function DashboardLayout({
             </button>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links - Filtered Dynamically by Permissions */}
           <nav id="sidebar-nav" className="px-3 py-2 space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPath === item.path || (currentPath === '/' && item.path === '/dashboard') || activeTab === item.id;
               return (
