@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { MenuItem, Table, StaffMember, Transaction } from './types';
+import { MenuItem, Category, Table, StaffMember, Transaction } from './types';
 import { MENU_ITEMS, CATEGORIES, TABLES_DATA, STAFF_DATA, TRANSACTIONS_DATA } from './data/mockData';
 
 // Auth and Route Protection
@@ -29,6 +29,7 @@ function AppContent() {
 
   // Global Shared States (simulates DB on client)
   const [menuItems, setMenuItems] = useState<MenuItem[]>(MENU_ITEMS);
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [tables, setTables] = useState<Table[]>(TABLES_DATA);
   const [staffList, setStaffList] = useState<StaffMember[]>(STAFF_DATA);
   const [transactions, setTransactions] = useState<Transaction[]>(TRANSACTIONS_DATA);
@@ -50,8 +51,24 @@ function AppContent() {
     setMenuItems(prev => [newItem, ...prev]);
   };
 
+  const handleEditItem = (updatedItem: MenuItem) => {
+    setMenuItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+  };
+
   const handleDeleteItem = (itemId: string) => {
     setMenuItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const handleAddCategory = (newCategory: Category) => {
+    setCategories(prev => [...prev, newCategory]);
+  };
+
+  const handleEditCategory = (updatedCategory: Category) => {
+    setCategories(prev => prev.map(c => c.id === updatedCategory.id ? updatedCategory : c));
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    setCategories(prev => prev.filter(c => c.id !== categoryId));
   };
 
   const handleToggleTableStatus = (tableId: string) => {
@@ -124,7 +141,7 @@ function AppContent() {
             </div>
             <QRMenu
               initialMenuItems={menuItems}
-              categories={CATEGORIES}
+              categories={categories}
               tableName={activeTableQRName}
               onSendOrderToKitchen={handleSendOrderToKitchen}
             />
@@ -144,7 +161,7 @@ function AppContent() {
             </div>
             <QRMenu
               initialMenuItems={menuItems}
-              categories={CATEGORIES}
+              categories={categories}
               tableName={activeTableQRName}
               onSendOrderToKitchen={handleSendOrderToKitchen}
             />
@@ -244,9 +261,14 @@ function AppContent() {
             >
               <Menu
                 menuItems={menuItems}
+                categories={categories}
                 onToggleStock={handleToggleStock}
                 onAddItem={handleAddItem}
+                onEditItem={handleEditItem}
                 onDeleteItem={handleDeleteItem}
+                onAddCategory={handleAddCategory}
+                onEditCategory={handleEditCategory}
+                onDeleteCategory={handleDeleteCategory}
                 searchQuery={searchQuery}
               />
             </DashboardLayout>

@@ -25,7 +25,6 @@ export interface MenuItem {
   id: string;
   category: string;
   name: string;
-  jpName?: string;
   description: string;
   price: number;
   image: string;
@@ -35,10 +34,11 @@ export interface MenuItem {
   rating?: number;
 }
 
+export type Product = MenuItem;
+
 export interface Category {
   id: string;
   label: string;
-  icon: string;
 }
 
 export interface CartItem {

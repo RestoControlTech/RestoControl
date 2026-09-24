@@ -198,7 +198,6 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                       : 'bg-stone-100 text-stone-600 hover:bg-stone-200/80 hover:text-stone-900'
                   }`}
                 >
-                  <span>{cat.icon}</span>
                   <span>{cat.label}</span>
                 </button>
               );
@@ -261,12 +260,21 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                         src={item.image}
                         alt={item.name}
                         loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className={`w-full h-full object-cover transition-transform duration-300 ${
+                          item.inStock ? 'group-hover:scale-105' : 'opacity-40 grayscale'
+                        }`}
                       />
-                      {item.badge && (
+                      {item.badge && item.inStock && (
                         <span className="absolute top-1.5 left-1.5 bg-stone-900/80 backdrop-blur-xs text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-md uppercase">
                           {item.badge}
                         </span>
+                      )}
+                      {!item.inStock && (
+                        <div className="absolute inset-0 bg-stone-900/40 flex items-center justify-center p-1">
+                          <span className="bg-red-600 text-white font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs text-center leading-tight">
+                            Unavailable
+                          </span>
+                        </div>
                       )}
                       {cartQty > 0 && (
                         <span className="absolute top-1.5 right-1.5 bg-orange-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
@@ -287,7 +295,11 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                         <span className="font-bold text-stone-900 text-xs">{formatPrice(item.price)}</span>
                         
                         <div>
-                          {cartQty === 0 ? (
+                          {!item.inStock ? (
+                            <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md border border-stone-200/80">
+                              Unavailable
+                            </span>
+                          ) : cartQty === 0 ? (
                             <Button
                               onClick={() => addToCart(item)}
                               variant="primary"
