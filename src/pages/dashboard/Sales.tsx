@@ -3,62 +3,131 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Download, TrendingUp, Receipt, ArrowRight, Eye } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Download, ArrowRight, Eye, CreditCard, Banknote, QrCode, Smartphone, Printer } from 'lucide-react';
 import { Transaction } from '../../types';
 import { formatPrice } from '../../utils/format';
+import { filterSales } from '../../utils/salesFilters';
+import { calculateSalesSummary } from '../../utils/salesSummary';
 import {
   Button,
-  Tabs,
   Badge,
-  SearchBar,
-  Card,
   Table,
   TableHead,
   TableBody,
   TableRow,
   TableCell,
   TableHeaderCell,
-  Modal,
+  EmptyState,
 } from '../../components/ui';
 import { PermissionGate } from '../../components/auth/PermissionGate';
+import { SaleDetailModal, SaleReceiptModal, SalesFilters, SalesSummary } from '../../components/sales';
 
 interface SalesProps {
   transactions: Transaction[];
-  searchQuery: string;
+  searchQuery?: string;
 }
 
-export default function Sales({ transactions, searchQuery }: SalesProps) {
-  const [activeDateTab, setActiveDateTab] = useState('today');
+export default function Sales({ transactions, searchQuery: externalSearch = '' }: SalesProps) {
+  const [activeDateTab, setActiveDateTab] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [localSearch, setLocalSearch] = useState('');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [receiptToView, setReceiptToView] = useState<Transaction | null>(null);
+
+  // Multi-attribute filter states
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const dateFilters = [
+    { id: 'all', label: 'All' },
     { id: 'today', label: 'Today' },
     { id: 'yesterday', label: 'Yesterday' },
-    { id: '7days', label: 'Last 7 Days' },
-    { id: 'month', label: 'Month' },
+    { id: 'week', label: 'This Week' },
+    { id: 'month', label: 'This Month' },
+    { id: 'custom', label: 'Custom' },
   ];
 
-  const filteredTx = transactions.filter(tx => {
-    const query = (localSearch || searchQuery).toLowerCase().trim();
-    return (
-      tx.orderNumber.toLowerCase().includes(query) ||
-      tx.table.toLowerCase().includes(query) ||
-      tx.type.toLowerCase().includes(query) ||
-      tx.dateTime.toLowerCase().includes(query) ||
-      tx.status.toLowerCase().includes(query)
-    );
-  });
+  // Completed sales representation (completed / paid transactions, excluding draft or cancelled tickets)
+  const completedSales = useMemo(() => {
+    return transactions.filter((tx) => tx.status === 'Receipt' || tx.status === 'Completed' || tx.status === 'Refunded');
+  }, [transactions]);
+
+  // Filtered sales based on date range, search query, and filter criteria
+  const filteredSales = useMemo(() => {
+    return filterSales(completedSales, {
+      searchQuery: localSearch || externalSearch,
+      paymentMethod: paymentFilter,
+      orderType: orderTypeFilter,
+      status: statusFilter,
+      dateRangePreset: activeDateTab,
+      customStart: customStartDate,
+      customEnd: customEndDate,
+    });
+  }, [
+    completedSales,
+    activeDateTab,
+    customStartDate,
+    customEndDate,
+    externalSearch,
+    localSearch,
+    paymentFilter,
+    orderTypeFilter,
+    statusFilter,
+  ]);
+
+  // Dynamic KPI analytics calculations derived directly from the filtered sales dataset
+  const salesSummary = useMemo(() => {
+    return calculateSalesSummary(filteredSales);
+  }, [filteredSales]);
+
+  const hasActiveFilters = Boolean(
+    localSearch ||
+    externalSearch ||
+    activeDateTab !== 'all' ||
+    customStartDate ||
+    customEndDate ||
+    paymentFilter !== 'all' ||
+    orderTypeFilter !== 'all' ||
+    statusFilter !== 'all'
+  );
+
+  const handleClearFilters = () => {
+    setLocalSearch('');
+    setActiveDateTab('all');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setPaymentFilter('all');
+    setOrderTypeFilter('all');
+    setStatusFilter('all');
+  };
+
+  const getPaymentMethodIcon = (method?: string) => {
+    switch (method) {
+      case 'Cash':
+        return <Banknote className="w-3 h-3 text-emerald-600" />;
+      case 'QR Code':
+        return <QrCode className="w-3 h-3 text-blue-600" />;
+      case 'Digital Wallet':
+        return <Smartphone className="w-3 h-3 text-purple-600" />;
+      case 'Credit Card':
+      case 'Debit Card':
+      default:
+        return <CreditCard className="w-3 h-3 text-orange-600" />;
+    }
+  };
 
   return (
-    <div id="sales-screen-root" className="space-y-6">
-      
+    <div id="sales-screen-root" className="space-y-6 pb-12">
       {/* Title & export actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Sales History</h2>
-          <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Historical transactions, payment summaries, and daily receipts.</p>
+          <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">
+            Historical transactions, payment summaries, and daily receipts.
+          </p>
         </div>
         <PermissionGate permission="sales.view">
           <Button
@@ -72,154 +141,167 @@ export default function Sales({ transactions, searchQuery }: SalesProps) {
         </PermissionGate>
       </div>
 
-      {/* Stats analytics panels */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* KPI Panel 1 */}
-        <Card padding="lg" className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Revenue</p>
-            <h4 className="text-lg font-black text-slate-800 tracking-tight">{formatPrice(3842.50)}</h4>
-            <span className="text-[9px] text-emerald-600 font-extrabold flex items-center gap-0.5 leading-none">
-              <TrendingUp className="w-3 h-3" />
-              <span>+14.2% vs yesterday</span>
-            </span>
-          </div>
-          <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </Card>
+      {/* KPI Stats Analytics Panels */}
+      <SalesSummary summary={salesSummary} isFiltered={hasActiveFilters} />
 
-        {/* KPI Panel 2 */}
-        <Card padding="lg" className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Orders</p>
-            <h4 className="text-lg font-black text-slate-800 tracking-tight">128 orders</h4>
-            <span className="text-[10px] text-emerald-600 font-extrabold leading-none">99.2% success rate</span>
-          </div>
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-            <Receipt className="w-5 h-5" />
-          </div>
-        </Card>
+      {/* Sales Filtering & Search Component */}
+      <SalesFilters
+        dateTabs={dateFilters}
+        activeDateTab={activeDateTab}
+        onDateTabChange={setActiveDateTab}
+        customStartDate={customStartDate}
+        onCustomStartDateChange={setCustomStartDate}
+        customEndDate={customEndDate}
+        onCustomEndDateChange={setCustomEndDate}
+        searchQuery={localSearch}
+        onSearchChange={setLocalSearch}
+        paymentFilter={paymentFilter}
+        onPaymentFilterChange={setPaymentFilter}
+        orderTypeFilter={orderTypeFilter}
+        onOrderTypeFilterChange={setOrderTypeFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={handleClearFilters}
+        filteredCount={filteredSales.length}
+      />
 
-        {/* KPI Panel 3 */}
-        <Card padding="lg" className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Average Order</p>
-            <h4 className="text-lg font-black text-slate-800 tracking-tight">{formatPrice(30.01)}</h4>
-            <span className="text-[9px] text-emerald-600 font-extrabold flex items-center gap-0.5 leading-none">
-              <TrendingUp className="w-3 h-3" />
-              <span>+$2.15 average</span>
-            </span>
-          </div>
-          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-        </Card>
-
-      </div>
-
-      {/* Main filter list rows and Search bar row */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border-b border-slate-50 pb-2">
-        
-        {/* Pills selections tabs */}
-        <Tabs
-          tabs={dateFilters}
-          activeTab={activeDateTab}
-          onChange={setActiveDateTab}
-          variant="dark"
-          className="w-full sm:w-auto"
+      {/* Completed Sales List Table */}
+      {filteredSales.length === 0 ? (
+        <EmptyState
+          title="No sales records found"
+          description={
+            hasActiveFilters
+              ? 'No completed sales matched your filter criteria. Try resetting your filters or search.'
+              : 'There are currently no completed sales in the transaction history.'
+          }
+          className="bg-white border border-slate-100 rounded-3xl p-10 my-4"
         />
+      ) : (
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell>Sale / Order #</TableHeaderCell>
+              <TableHeaderCell>Date & Time</TableHeaderCell>
+              <TableHeaderCell>Type & Table</TableHeaderCell>
+              <TableHeaderCell>Customer</TableHeaderCell>
+              <TableHeaderCell>Items Summary</TableHeaderCell>
+              <TableHeaderCell>Payment Method</TableHeaderCell>
+              <TableHeaderCell>Total</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+            </TableRow>
+          </TableHead>
 
-        {/* Local Search input */}
-        <div className="w-full sm:w-64">
-          <SearchBar
-            value={localSearch}
-            onChange={setLocalSearch}
-            placeholder="Search transaction or order #..."
-            size="sm"
-            className="bg-white"
-          />
-        </div>
-
-      </div>
-
-      {/* Main receipts table container */}
-      <Table>
-        <TableHead>
-          <tr>
-            <TableHeaderCell>Transaction / Order</TableHeaderCell>
-            <TableHeaderCell>Date & Time</TableHeaderCell>
-            <TableHeaderCell>Table / Type</TableHeaderCell>
-            <TableHeaderCell>Total Amount</TableHeaderCell>
-            <TableHeaderCell className="text-right">Action</TableHeaderCell>
-          </tr>
-        </TableHead>
-
-        <TableBody className="font-mono">
-          {filteredTx.map(tx => {
-            const isRefund = tx.status === 'Refunded';
-            return (
-              <TableRow key={tx.id}>
-                
-                {/* Order identity number */}
-                <TableCell className="font-sans">
-                  <div className="font-extrabold text-slate-800">{tx.orderNumber}</div>
-                  <div className="text-[10px] text-slate-400 font-semibold leading-none mt-1">Order #{tx.id.replace('tx-', '')}</div>
-                </TableCell>
-
-                {/* Timestamp */}
-                <TableCell className="text-slate-500 font-bold">
-                  {tx.dateTime}
-                </TableCell>
-
-                {/* Table assignment / Order flow type */}
-                <TableCell className="font-sans">
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                    <div>
-                      <span className="font-extrabold text-slate-800">{tx.table}</span>
-                      <span className="text-[10px] text-slate-400 font-semibold ml-1.5">({tx.type})</span>
+          <TableBody>
+            {filteredSales.map((sale) => {
+              const isRefund = sale.status === 'Refunded';
+              return (
+                <TableRow
+                  key={sale.id}
+                  onClick={() => setSelectedTx(sale)}
+                  className="cursor-pointer hover:bg-slate-50/80 transition-colors"
+                >
+                  {/* 1. Sale / Order Number */}
+                  <TableCell>
+                    <div className="font-extrabold text-slate-800 text-xs">{sale.orderNumber}</div>
+                    <div className="text-[10px] text-slate-400 font-semibold leading-none mt-0.5">
+                      #{sale.id.replace('tx-', 'TX-')}
                     </div>
-                  </div>
-                </TableCell>
+                  </TableCell>
 
-                {/* Pricing with tabular figures alignment */}
-                <TableCell className={`font-bold ${isRefund ? 'text-red-500' : 'text-slate-800'}`}>
-                  {formatPrice(tx.amount)}
-                </TableCell>
+                  {/* 2. Date & Time */}
+                  <TableCell className="text-slate-500 font-bold text-xs whitespace-nowrap">
+                    {sale.dateTime}
+                  </TableCell>
 
-                {/* Action invoice view pill */}
-                <TableCell className="text-right font-sans">
-                  <Badge variant={isRefund ? 'red' : 'slate'} size="sm">
-                    {tx.status}
-                  </Badge>
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedTx(tx)}
-                    className="ml-2.5 p-1 text-slate-400 hover:text-slate-600 rounded-lg active:scale-95 cursor-pointer"
-                    title="View details"
-                  >
-                    <Eye className="w-3.5 h-3.5 inline" />
-                  </button>
-                </TableCell>
+                  {/* 3. Order Type & Table */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                      <div>
+                        <span className="font-extrabold text-slate-800 text-xs">{sale.table || 'Pickup'}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold ml-1.5">({sale.type})</span>
+                      </div>
+                    </div>
+                  </TableCell>
 
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  {/* 4. Customer Name */}
+                  <TableCell className="text-xs font-bold text-slate-700">
+                    {sale.customerName || 'Walk-in Guest'}
+                  </TableCell>
 
-      {/* Table footer pagination */}
+                  {/* 5. Items Summary */}
+                  <TableCell className="text-xs text-slate-600 max-w-[13rem] truncate font-medium">
+                    {sale.itemSummary || (sale.items ? `${sale.items.length} item(s)` : 'Order items')}
+                  </TableCell>
+
+                  {/* 6. Payment Method */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                      {getPaymentMethodIcon(sale.paymentMethod)}
+                      <span>{sale.paymentMethod || 'Credit Card'}</span>
+                    </div>
+                  </TableCell>
+
+                  {/* 7. Total Amount & Currency */}
+                  <TableCell className={`font-black text-xs whitespace-nowrap ${isRefund ? 'text-red-500' : 'text-slate-900'}`}>
+                    {formatPrice(sale.amount, sale.currency || 'USD')}
+                    <span className="text-[9px] font-bold text-slate-400 ml-1">{sale.currency || 'USD'}</span>
+                  </TableCell>
+
+                  {/* 8. Status */}
+                  <TableCell>
+                    <Badge variant={isRefund ? 'red' : 'emerald'} size="xs" className="font-extrabold text-[9px]">
+                      {isRefund ? 'Refunded' : 'Completed'}
+                    </Badge>
+                  </TableCell>
+
+                  {/* 9. Action Buttons */}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTx(sale);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
+                        title="View sale details"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReceiptToView(sale);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                        title="Print / View Receipt"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
+
+      {/* Table Footer Pagination */}
       <div className="bg-slate-50/50 border border-slate-100 rounded-2xl px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400 font-bold select-none">
-        <span>Showing 1 to {filteredTx.length} of 128 transactions</span>
-        
+        <span>
+          Showing {filteredSales.length} of {completedSales.length} completed transaction{completedSales.length === 1 ? '' : 's'}
+        </span>
+
         <div className="flex items-center gap-1 font-mono font-black text-xs">
           <button className="px-2 py-1 rounded bg-white border border-slate-200 text-slate-600 shadow-xs cursor-pointer">1</button>
           <button className="px-2 py-1 rounded text-slate-400 hover:bg-slate-100 cursor-pointer">2</button>
-          <button className="px-2 py-1 rounded text-slate-400 hover:bg-slate-100 cursor-pointer">3</button>
           <span className="px-1 text-slate-300">...</span>
-          <button className="px-2 py-1 rounded text-slate-400 hover:bg-slate-100 cursor-pointer">19</button>
           <button className="px-2.5 py-1 rounded hover:bg-slate-100 text-slate-500 flex items-center gap-0.5 ml-1.5 font-sans text-[10px] font-black uppercase cursor-pointer">
             <span>Next</span>
             <ArrowRight className="w-3 h-3" />
@@ -227,53 +309,20 @@ export default function Sales({ transactions, searchQuery }: SalesProps) {
         </div>
       </div>
 
-      {/* Transaction Details Modal */}
-      <Modal
+      {/* Sale Detail View Modal */}
+      <SaleDetailModal
         isOpen={Boolean(selectedTx)}
         onClose={() => setSelectedTx(null)}
-        title={selectedTx ? `Invoice Receipt: ${selectedTx.orderNumber}` : ''}
-        maxWidth="sm"
-      >
-        {selectedTx && (
-          <div className="space-y-4">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-400 font-bold">Table:</span>
-                <span className="font-extrabold text-slate-800">{selectedTx.table}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400 font-bold">Type:</span>
-                <span className="font-extrabold text-slate-800">{selectedTx.type}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400 font-bold">Date & Time:</span>
-                <span className="font-extrabold text-slate-800">{selectedTx.dateTime}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400 font-bold">Status:</span>
-                <Badge variant={selectedTx.status === 'Refunded' ? 'red' : 'emerald'} size="xs">
-                  {selectedTx.status}
-                </Badge>
-              </div>
-              <div className="border-t border-slate-200/60 pt-2 flex justify-between font-black text-sm text-slate-900">
-                <span>Total:</span>
-                <span>{formatPrice(selectedTx.amount)}</span>
-              </div>
-            </div>
+        sale={selectedTx}
+        onOpenReceipt={(sale) => setReceiptToView(sale)}
+      />
 
-            <div className="flex justify-end pt-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setSelectedTx(null)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
-
+      {/* Sale Receipt View & Print Modal */}
+      <SaleReceiptModal
+        isOpen={Boolean(receiptToView)}
+        onClose={() => setReceiptToView(null)}
+        sale={receiptToView}
+      />
     </div>
   );
 }

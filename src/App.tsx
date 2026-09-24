@@ -109,10 +109,16 @@ function AppContent() {
       id: txId,
       orderNumber: txNum,
       dateTime: 'Just Now',
-      table: activeTableQRName,
+      table: activeTableQRName || 'Table 01',
       type: 'Dine-in',
       amount: total,
-      status: 'Receipt'
+      status: 'Receipt',
+      paymentMethod: 'QR Code',
+      customerName: 'Table Guest',
+      currency: 'USD',
+      itemSummary: `${itemsCount} item${itemsCount === 1 ? '' : 's'}`,
+      subtotal: total * 0.9,
+      tax: total * 0.1,
     };
 
     setTransactions(prev => [newTx, ...prev]);

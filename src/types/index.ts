@@ -67,6 +67,17 @@ export interface StaffMember {
   status: 'Active' | 'Off Duty';
 }
 
+export type PaymentMethod = 'Cash' | 'Credit Card' | 'Debit Card' | 'QR Code' | 'Digital Wallet';
+
+export interface SaleItem {
+  id?: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal?: number;
+  cost?: number;
+}
+
 export interface Transaction {
   id: string;
   orderNumber: string;
@@ -74,8 +85,22 @@ export interface Transaction {
   table: string;
   type: 'Dine-in' | 'Takeaway';
   amount: number;
-  status: 'Receipt' | 'Refunded';
+  status: 'Receipt' | 'Completed' | 'Refunded';
+  paymentMethod?: PaymentMethod | string;
+  customerName?: string;
+  currency?: string;
+  items?: SaleItem[];
+  itemSummary?: string;
+  subtotal?: number;
+  tax?: number;
+  cashReceived?: number;
+  change?: number;
+  amountPaid?: number;
+  paymentStatus?: 'Paid' | 'Refunded' | 'Pending';
+  notes?: string;
 }
+
+export type Sale = Transaction;
 
 export type AppView = 'customer-qr' | 'dashboard';
 
