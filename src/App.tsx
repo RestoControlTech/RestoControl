@@ -95,6 +95,10 @@ function AppContent() {
     setStaffList(prev => prev.map(s => s.id === updatedMember.id ? updatedMember : s));
   };
 
+  const handleRefundSale = (refundTx: Transaction, updatedSale: Transaction) => {
+    setTransactions(prev => [refundTx, ...prev.map(t => t.id === updatedSale.id ? updatedSale : t)]);
+  };
+
   // Switch to customer QR menu directly for a chosen table
   const handleViewMenuFromPOS = (tableName: string) => {
     setActiveTableQRName(tableName);
@@ -315,6 +319,7 @@ function AppContent() {
               <Sales
                 transactions={transactions}
                 searchQuery={searchQuery}
+                onRefundSale={handleRefundSale}
               />
             </DashboardLayout>
           </ProtectedRoute>

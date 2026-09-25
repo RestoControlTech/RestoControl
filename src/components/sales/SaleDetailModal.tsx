@@ -19,9 +19,12 @@ import {
   Coins,
   ArrowLeft,
   Printer,
+  RotateCcw,
 } from 'lucide-react';
-import { Transaction } from '../../types';
+import { Transaction, SaleItem } from '../../types';
 import { formatPrice } from '../../utils/format';
+import { isSaleEligibleForRefund } from '../../utils/refundRules';
+import { getRefundableQuantity } from '../../utils/refundUtils';
 import { Modal, Badge, Button } from '../ui';
 
 export interface SaleDetailModalProps {
@@ -29,6 +32,8 @@ export interface SaleDetailModalProps {
   onClose: () => void;
   sale: Transaction | null;
   onOpenReceipt?: (sale: Transaction) => void;
+  onOpenRefund?: (sale: Transaction, item?: SaleItem) => void;
+  onOpenFullRefund?: (sale: Transaction) => void;
 }
 
 export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
@@ -36,12 +41,15 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   onClose,
   sale,
   onOpenReceipt,
+  onOpenRefund,
+  onOpenFullRefund,
 }) => {
   if (!sale) return null;
 
   const currency = sale.currency || 'USD';
   const isRefund = sale.status === 'Refunded' || sale.paymentStatus === 'Refunded';
   const isCash = sale.paymentMethod?.toLowerCase() === 'cash';
+  const isEligibleForRefund = isSaleEligibleForRefund(sale).eligible;
 
   const getPaymentMethodIcon = (method?: string) => {
     switch (method) {
@@ -169,14 +177,28 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                     <th className="py-2.5 px-3.5 text-center">Qty</th>
                     <th className="py-2.5 px-3.5 text-right">Unit Price</th>
                     <th className="py-2.5 px-3.5 text-right">Line Total</th>
+                    {onOpenRefund && isEligibleForRefund && (
+                      <th className="py-2.5 px-3.5 text-right">Action</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
                   {sale.items.map((item, idx) => {
                     const lineTotal = item.subtotal ?? item.unitPrice * item.quantity;
+                    const hasRefund = typeof item.refundedQuantity === 'number' && item.refundedQuantity > 0;
+                    const remQty = getRefundableQuantity(item.quantity, item.refundedQuantity);
+                    const isItemFullyRefunded = remQty === 0;
+
                     return (
                       <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3.5 font-bold text-slate-800">{item.name}</td>
+                        <td className="py-2.5 px-3.5 font-bold text-slate-800">
+                          <span>{item.name}</span>
+                          {hasRefund && (
+                            <span className="text-[10px] text-rose-500 font-extrabold ml-1.5 inline-block">
+                              ({item.refundedQuantity} refunded)
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-3.5 text-center font-mono">{item.quantity}</td>
                         <td className="py-2.5 px-3.5 text-right font-mono text-slate-600">
                           {formatPrice(item.unitPrice, currency)}
@@ -184,6 +206,21 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
                         <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-900">
                           {formatPrice(lineTotal, currency)}
                         </td>
+                        {onOpenRefund && isEligibleForRefund && (
+                          <td className="py-2.5 px-3.5 text-right">
+                            {isItemFullyRefunded ? (
+                              <span className="text-[10px] font-bold text-slate-400">Refunded</span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onOpenRefund(sale, item)}
+                                className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                              >
+                                Refund
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -220,6 +257,14 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               <div className="flex justify-between text-slate-500 font-semibold">
                 <span>Tax / Service:</span>
                 <span className="font-mono">{formatPrice(sale.tax, currency)}</span>
+              </div>
+            )}
+
+            {/* Total Refunded line if partial refund has occurred */}
+            {sale.refundedAmount !== undefined && sale.refundedAmount > 0 && (
+              <div className="flex justify-between text-rose-600 font-bold border-t border-slate-100 pt-1">
+                <span>Already Refunded:</span>
+                <span className="font-mono">-{formatPrice(sale.refundedAmount, currency)}</span>
               </div>
             )}
 
@@ -288,27 +333,55 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Action Buttons: Close / Return to Sales History & Print Receipt */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+        {/* Modal Action Buttons: Close / Issue Refund / Print Receipt */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
           <Button
             variant="secondary"
             size="md"
             onClick={onClose}
             icon={<ArrowLeft className="w-4 h-4" />}
           >
-            Back to Sales History
+            Back
           </Button>
 
-          {onOpenReceipt && (
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => onOpenReceipt(sale)}
-              icon={<Printer className="w-4 h-4" />}
-            >
-              Print Receipt
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {onOpenFullRefund && isEligibleForRefund && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => onOpenFullRefund(sale)}
+                icon={<RotateCcw className="w-4 h-4 text-rose-600" />}
+                className="hover:border-rose-300 text-rose-700 font-bold"
+                id="open-full-refund-btn"
+              >
+                Full Refund
+              </Button>
+            )}
+
+            {onOpenRefund && isEligibleForRefund && (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => onOpenRefund(sale)}
+                icon={<RotateCcw className="w-4 h-4 text-slate-600" />}
+                className="hover:border-slate-300 text-slate-700"
+                id="open-partial-refund-btn"
+              >
+                {onOpenFullRefund ? 'Partial Refund' : 'Issue Refund'}
+              </Button>
+            )}
+
+            {onOpenReceipt && (
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => onOpenReceipt(sale)}
+                icon={<Printer className="w-4 h-4" />}
+              >
+                Print Receipt
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </Modal>

@@ -21,20 +21,86 @@ import {
   EmptyState,
 } from '../../components/ui';
 import { PermissionGate } from '../../components/auth/PermissionGate';
-import { SaleDetailModal, SaleReceiptModal, SalesFilters, SalesSummary } from '../../components/sales';
+import {
+  SaleDetailModal,
+  SaleReceiptModal,
+  SalesFilters,
+  SalesSummary,
+  PartialRefundModal,
+  FullRefundModal,
+} from '../../components/sales';
+import { usePartialRefund } from '../../hooks/usePartialRefund';
+import { useFullRefund } from '../../hooks/useFullRefund';
 
 interface SalesProps {
   transactions: Transaction[];
   searchQuery?: string;
+  onRefundSale?: (refundTx: Transaction, updatedSale: Transaction) => void;
 }
 
-export default function Sales({ transactions, searchQuery: externalSearch = '' }: SalesProps) {
+export default function Sales({
+  transactions,
+  searchQuery: externalSearch = '',
+  onRefundSale,
+}: SalesProps) {
+  const [localSales, setLocalSales] = useState<Transaction[]>(transactions);
   const [activeDateTab, setActiveDateTab] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [localSearch, setLocalSearch] = useState('');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [receiptToView, setReceiptToView] = useState<Transaction | null>(null);
+
+  // Synchronize if prop changes from parent
+  React.useEffect(() => {
+    setLocalSales(transactions);
+  }, [transactions]);
+
+  // Hook managing partial refund modal state and execution
+  const {
+    saleToRefund,
+    itemToRefund,
+    isRefundModalOpen,
+    openRefundModal,
+    closeRefundModal,
+    handleConfirmRefund,
+  } = usePartialRefund({
+    onRefundSuccess: (refundTransaction, updatedSale) => {
+      setLocalSales((prev) => [
+        refundTransaction,
+        ...prev.map((t) => (t.id === updatedSale.id ? updatedSale : t)),
+      ]);
+      if (selectedTx && selectedTx.id === updatedSale.id) {
+        setSelectedTx(updatedSale);
+      }
+      if (onRefundSale) {
+        onRefundSale(refundTransaction, updatedSale);
+      }
+    },
+  });
+
+  // Hook managing full refund modal state and execution
+  const {
+    saleToFullRefund,
+    isFullRefundModalOpen,
+    fullRefundError,
+    openFullRefundModal,
+    closeFullRefundModal,
+    handleConfirmFullRefund,
+  } = useFullRefund({
+    onRefundSuccess: (refundTransaction, updatedSale) => {
+      setLocalSales((prev) => [
+        refundTransaction,
+        ...prev.map((t) => (t.id === updatedSale.id ? updatedSale : t)),
+      ]);
+      if (selectedTx && selectedTx.id === updatedSale.id) {
+        setSelectedTx(updatedSale);
+      }
+      if (onRefundSale) {
+        onRefundSale(refundTransaction, updatedSale);
+      }
+    },
+  });
 
   // Multi-attribute filter states
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
@@ -52,8 +118,10 @@ export default function Sales({ transactions, searchQuery: externalSearch = '' }
 
   // Completed sales representation (completed / paid transactions, excluding draft or cancelled tickets)
   const completedSales = useMemo(() => {
-    return transactions.filter((tx) => tx.status === 'Receipt' || tx.status === 'Completed' || tx.status === 'Refunded');
-  }, [transactions]);
+    return localSales.filter(
+      (tx) => tx.status === 'Receipt' || tx.status === 'Completed' || tx.status === 'Refunded'
+    );
+  }, [localSales]);
 
   // Filtered sales based on date range, search query, and filter criteria
   const filteredSales = useMemo(() => {
@@ -315,6 +383,8 @@ export default function Sales({ transactions, searchQuery: externalSearch = '' }
         onClose={() => setSelectedTx(null)}
         sale={selectedTx}
         onOpenReceipt={(sale) => setReceiptToView(sale)}
+        onOpenRefund={(sale, item) => openRefundModal(sale, item)}
+        onOpenFullRefund={(sale) => openFullRefundModal(sale)}
       />
 
       {/* Sale Receipt View & Print Modal */}
@@ -322,6 +392,24 @@ export default function Sales({ transactions, searchQuery: externalSearch = '' }
         isOpen={Boolean(receiptToView)}
         onClose={() => setReceiptToView(null)}
         sale={receiptToView}
+      />
+
+      {/* Partial Refund Workflow Modal */}
+      <PartialRefundModal
+        isOpen={isRefundModalOpen}
+        onClose={closeRefundModal}
+        sale={saleToRefund}
+        item={itemToRefund}
+        onConfirmRefund={handleConfirmRefund}
+      />
+
+      {/* Full Refund Confirmation Modal */}
+      <FullRefundModal
+        isOpen={isFullRefundModalOpen}
+        onClose={closeFullRefundModal}
+        sale={saleToFullRefund}
+        onConfirm={handleConfirmFullRefund}
+        errorMessage={fullRefundError}
       />
     </div>
   );

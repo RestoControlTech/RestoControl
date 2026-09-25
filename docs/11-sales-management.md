@@ -498,8 +498,503 @@ All 17 test suites and mathematical invariants passed:
 
 ---
 
-## 13. Known Limitations & Next Steps
+---
 
-1. **Product Cost Persistence**: While `SaleItem` now supports `cost?: number`, default mock data items do not include ingredient cost values. An administrative inventory/cost management module will be needed if persistent item costs are required.
-2. **Refund Processing (Step 9F)**: Refund button and reverse-transaction processing.
-3. **Sales Reports (Step 10)**: Aggregate analytics, station reports, and chart exports.
+## 13. Step 9F-1 — Refund Data Model & Business Rules
+
+Step 9F-1 inspects and establishes the core refund/return data structures, relationships, and 10 business rules prior to UI modal implementation.
+
+### A. Existing Project Inspection & Findings
+1. **Existing Transaction Structure**:
+   - `Transaction` already defined `status: 'Receipt' | 'Completed' | 'Refunded'` and `paymentStatus: 'Paid' | 'Refunded' | 'Pending'`.
+   - In `src/data/mockData.ts`, `tx4` represented an existing refund with negative amount (`amount: -18.00`, `status: 'Refunded'`, `paymentStatus: 'Refunded'`, `items: [{ name: 'Matcha Parfait', quantity: 2, unitPrice: 9.00, subtotal: 18.00 }]`).
+   - `SaleDetailModal` and `SaleReceiptModal` already rendered red badges and negative amounts when `isRefund` is true.
+   - `salesFilters.ts` already supported filtering by `status: 'paid'` and `status: 'refunded'`.
+   - `salesSummary.ts` already excluded refunded transactions from gross paid revenue.
+2. **Missing Information & Gaps Identified**:
+   - No reference connecting refund reversal records to original sales (no `originalTransactionId` or `originalOrderNumber`).
+   - No tracking of previously refunded quantities per item (`refundedQuantity`).
+   - No tracking of cumulative refunded amounts on sales (`refundedAmount`).
+   - No formal request/validation interfaces or business rule validation engine.
+   - Zero backend/database table exists; all operations run deterministically in memory.
+
+### B. Extended Refund Data Model (`src/types/index.ts`)
+To eliminate duplicate models and maintain 100% backward compatibility, existing interfaces were extended with optional fields:
+```typescript
+export interface SaleItem {
+  id?: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal?: number;
+  cost?: number;
+  refundedQuantity?: number; // Cumulative refunded count for this item
+}
+
+export interface RefundItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  originalItemId?: string;
+}
+
+export interface RefundRequestItem {
+  name: string;
+  quantity: number;
+  unitPrice?: number;
+}
+
+export interface RefundRequest {
+  items: RefundRequestItem[];
+  reason?: string;
+  customAmount?: number;
+}
+
+export interface Transaction {
+  // ... existing fields ...
+  originalTransactionId?: string; // Links refund transaction to original sale
+  originalOrderNumber?: string;   // Links refund to original order identifier
+  refundedAmount?: number;        // Cumulative refunded dollar/currency amount
+  refundReason?: string;          // Audit note / reason for refund
+}
+```
+
+### C. 10 Core Refund Business Rules & Validation Engine (`src/utils/refundRules.ts`)
+The validation engine rigorously enforces the 10 business rules:
+1. **Rule 1 (Sale Eligibility)**: Only completed/paid sales (`status === 'Completed' | 'Receipt'` and `paymentStatus === 'Paid'`) with remaining refundable balance can be refunded. Already refunded sales are blocked.
+2. **Rule 2 (Quantity Limit)**: `refundQuantity <= remainingQuantity` (cannot exceed quantity originally sold).
+3. **Rule 3 (Positive Quantity)**: `refundQuantity > 0` (zero or negative quantities are rejected).
+4. **Rule 4 (Non-Negative Amount)**: Refund amount must be `>= 0` (negative amounts rejected).
+5. **Rule 5 (No Double-Refund)**: An item whose remaining refundable quantity is 0 cannot be refunded again.
+6. **Rule 6 (Partial Refund Support)**: Supports refunding a subset of items (e.g. 1 out of 2 bowls) or partial order value.
+7. **Rule 7 (Total Quantity Bound)**: `(alreadyRefundedQuantity + requestedQuantity) <= originalQuantity`.
+8. **Rule 8 (Amount Limit)**: Total refund amount must not exceed `remainingRefundableAmount = sale.amount - (sale.refundedAmount || 0)`.
+9. **Rule 9 (Sale Relationship)**: Reversal records must reference `originalTransactionId` and `originalOrderNumber`.
+10. **Rule 10 (Item Relationship)**: Refund line items must reference valid items matching the original sale.
+
+### E. Step 9F-3 — Partial Refund Workflow Implementation
+
+Step 9F-3 delivers the end-to-end partial refund workflow:
+
+#### 1. Quantity & Amount Calculation Engine
+Implemented in `src/utils/refundRules.ts`:
+- `getItemRefundDetails(item: SaleItem)`: Returns `{ originalQuantity, alreadyRefunded, remaining }`.
+- `calculatePartialRefundAmount(item: SaleItem, quantity: number)`: Computes exact line refund amount (`unitPrice * quantity`).
+- `applyPartialRefundToSale(sale: Transaction, request: RefundRequest)`:
+  - Validates requested item quantities against remaining available balances.
+  - Updates `item.refundedQuantity` and `sale.refundedAmount` immutably.
+  - Generates a linked reverse refund transaction (`amount: -refundAmount`, `status: 'Refunded'`, `paymentStatus: 'Refunded'`, referencing `originalTransactionId` and `originalOrderNumber`).
+  - Transitions `updatedSale.status` to `'Refunded'` once all line items or the entire sale amount have been refunded.
+
+#### 2. User Interface (`PartialRefundModal.tsx`)
+- Triggered directly from `SaleDetailModal` via the "Issue Refund" button (shown only for refund-eligible sales).
+- Shows live breakdown per item:
+  - Original sold quantity.
+  - Already refunded quantity with rose badge indicator.
+  - Remaining refundable quantity.
+  - Interactive stepper buttons (`-` and `+`) constrained between 0 and `remaining`.
+  - Item refund subtotal.
+  - "Fully Refunded" badge with disabled controls when remaining equals 0.
+- Summary bar:
+  - Dynamic total refund amount.
+  - Selected item count.
+  - Remaining refundable balance.
+  - Reason / audit note input field.
+  - Confirm Refund button displaying exact refund sum.
+
+#### 3. State Consistency & Multiple Partial Refunds
+- Supports consecutive partial refunds (e.g. 5 -> refund 2 -> remaining 3 -> refund 1 -> remaining 2).
+- Handles multiple items independently: refunding one item does not affect the remaining quantity of another.
+- Prepends the reversal transaction to the sales list while updating the original sale immutably.
+- Automatically refreshes the Sales History table, Sales Filters, and Live KPI Summary.
+
+#### 4. Step 9F-3 Test Verification Results (`sales9F.test.ts`)
+All 14 partial refund test suites passed:
+1. **Refund 1 of 5 items**: Correctly validated and remaining updated to 4.
+2. **Refund 2 of 5 items**: Correctly validated and remaining updated to 3.
+3. **Refund remaining quantity**: Successfully refunds final 2 items and closes balance to 0.
+4. **Two consecutive partial refunds**: 5 -> refund 2 (rem 3) -> refund 1 (rem 2) verified.
+5. **Multiple partial refunds until fully refunded**: Transitions status and blocks further refunds.
+6. **Attempt to refund more than remaining quantity**: Rejected with clear error.
+7. **Attempt to refund zero**: Correctly rejected.
+8. **Attempt to refund negative quantity**: Correctly rejected.
+9. **Attempt to refund after fully refunded**: Blocked with validation message.
+10. **Partial refund amount calculation**: Exact unit price multiplication and balance limits verified.
+11. **Multiple items in same sale**: Each item refunded independently without cross-item contamination.
+12. **Original sale remains unchanged**: Complete object immutability confirmed.
+13. **Duplicate refund prevention**: Second identical refund attempt blocked.
+14. **Existing Sales regression**: Verified real mock transaction partial refund execution.
+
+---
+
+### 13.F Step 9F-3A — Partial Refund Data Logic (`refundUtils.ts`)
+
+A dedicated, lightweight mathematical calculation and validation module was implemented at `src/utils/refundUtils.ts` to separate core refund calculations from complex UI components and rule validators:
+
+#### 1. Core Functions
+
+```typescript
+// 1. Calculate remaining refundable quantity
+export function getRefundableQuantity(
+  originalQuantity?: number | null,
+  refundedQuantity?: number | null
+): number;
+
+// 2. Calculate remaining refundable monetary amount
+export function getRefundableAmount(
+  originalAmount?: number | null,
+  refundedAmount?: number | null
+): number;
+
+// 3. Calculate partial refund amount from unit price & quantity
+export function calculatePartialRefundAmount(
+  unitPriceOrItem: number | { unitPrice: number },
+  quantity?: number | null
+): number;
+
+// 4. Validate whether a quantity can be refunded
+export function canRefundQuantity(
+  quantity?: number | null,
+  refundableQuantity?: number | null
+): boolean;
+```
+
+#### 2. Business Invariants & Defensive Protections
+- **Non-Negative Invariant**: `getRefundableQuantity` and `getRefundableAmount` always clamp outputs to `>= 0`. Under no circumstances can refundable quantity or amount become negative.
+- **Input Sanitization**: Rejects `NaN`, `null`, `undefined`, and negative values. Negative refunded quantities/amounts are clamped to 0 to prevent artificial inflation of refundable balances.
+- **Floating Point Safety**: Money amounts are rounded to 2 decimal places (`Math.round(val * 100) / 100`) preventing IEEE 754 precision artifacts.
+- **Zero Mutation**: All operations are pure functions that do not mutate input objects.
+
+#### 3. Test Coverage (`src/data/refund9F3.test.ts`)
+- `getRefundableQuantity`: 1 of 5 (leaves 4), 2 of 5 (leaves 3), remaining 3 of 5 (leaves 2), fully refunded (leaves 0), initial (leaves 5), default parameters, overflow clamp to 0, negative input treatment.
+- `getRefundableAmount`: Normal deduction, 2-decimal precision, zero refunded, fully refunded (0.00), over-refund clamp (0.00), negative input handling.
+- `calculatePartialRefundAmount`: Standard product multiplication, 2-decimal rounding, item object overload, zero quantity, negative quantity, negative unit price, NaN handling.
+- `canRefundQuantity`: Valid quantities (1, 2, 4, 5 of 5), zero quantity rejection, negative quantity rejection, quantity exceeding remaining rejection, fully refunded rejection, corrupt negative balance rejection, NaN/undefined validation.
+- `Multiple partial refunds`: Sequential step-by-step lifecycle test simulating:
+  - Initial (5 available, $60.00).
+  - Step 1: Refund 2 items ($24.00, 3 remaining, $36.00 balance).
+  - Intermediate rejection: Attempting 4 when 3 remaining rejected.
+  - Step 2: Refund 1 item ($12.00, 2 remaining, $24.00 balance).
+  - Step 3: Refund remaining 2 items ($24.00, 0 remaining, $0.00 balance).
+  - Step 4: Rejection of any further refund requests once exhausted.
+- `Immutability verification`: Verifies input objects remain strictly unchanged.
+
+---
+
+### 13.G Step 9F-3B — Partial Refund UI Component (`PartialRefundModal.tsx`)
+
+A dedicated, lightweight, and reusable modal component was created at `src/components/sales/PartialRefundModal.tsx` to handle partial quantity selection with zero embedded business logic:
+
+#### 1. Component Displays & Controls
+1. **Product / Item Name**: Shows active item name, unit price, and currency formatted via `formatPrice`. When multiple items are present in a sale, a dropdown selector allows switching between items.
+2. **Original Quantity**: Displayed in an itemized breakdown card (`originalQuantity`).
+3. **Already Refunded Quantity**: Displayed with rose styling (`refundedQuantity`).
+4. **Remaining Refundable Quantity**: Computed via `getRefundableQuantity` and styled with emerald indicators or a "Fully Refunded" badge.
+5. **Quantity Input**: Interactive number input coupled with `-` and `+` decrement/increment stepper buttons constrained within `[1, remainingQuantity]`.
+6. **Refund Amount**: Real-time calculation derived via `calculatePartialRefundAmount(unitPrice, quantity)` and displayed in bold rose currency.
+7. **Refund Reason**: Optional text input capturing notes for audit tracking.
+8. **Cancel Button**: Closes modal and resets state cleanly.
+9. **Continue / Refund Button**: Dynamically shows refund sum and is automatically disabled whenever the entered quantity is invalid.
+
+#### 2. Validation & Architectural Invariants
+- Embedded calculation logic was strictly avoided by leveraging `src/utils/refundUtils.ts` (`getRefundableQuantity`, `calculatePartialRefundAmount`, `validatePartialRefundQuantity`).
+- Quantities `< 1` are blocked with an immediate validation banner: `"Refund quantity must be at least 1."`
+- Quantities exceeding `remainingQuantity` are blocked with: `"Refund quantity cannot exceed remaining refundable quantity (X)."`
+- Items with `0` remaining refundable quantity display `"This item has already been fully refunded."` with disabled inputs.
+- Modal state resets predictably upon opening or switching between items.
+
+#### 3. Test Coverage (`src/data/refund9F3B.test.ts`)
+- Modal opens and props contract validation.
+- Correct item information display (name, unit price, formatted currency).
+- Remaining quantity calculation for active and fully refunded items.
+- Valid quantity range `[1, remaining]` verification.
+- Invalid quantity error states (zero, negative, excess, NaN, fully refunded).
+- Submit button disable behavior.
+- Live refund amount display and currency formatting.
+- Modal cancellation and confirmation callback dispatches.
+
+---
+
+### 13.H Step 9F-3C — Connect Partial Refund UI to Existing Sales Flow (`usePartialRefund.ts`)
+
+A dedicated React hook was introduced at `src/hooks/usePartialRefund.ts` to coordinate the modal lifecycle and connect user interactions directly to the transactional ledger without polluting `Sales.tsx`:
+
+#### 1. Architecture & Responsibilities
+- **`src/utils/refundUtils.ts`**: Pure mathematical calculations and quantity boundary validation.
+- **`src/hooks/usePartialRefund.ts`**: Manages modal visibility, active sale/item state, and transactional execution via `applyPartialRefundToSale`.
+- **`src/components/sales/PartialRefundModal.tsx`**: Presentational modal view handling user input and stepper controls.
+- **`src/components/sales/SaleDetailModal.tsx`**: Displays sale items with inline "Refund" triggers per item and the primary "Issue Refund" button at the bottom.
+- **`src/pages/dashboard/Sales.tsx`**: Host page orchestrating local state synchronization and propagating updates to root app context.
+
+#### 2. Workflow & State Consistency
+1. **Triggering Refund**:
+   - Clicking "Issue Refund" in `SaleDetailModal` opens `PartialRefundModal` for the entire sale.
+   - Clicking "Refund" on a specific item row opens `PartialRefundModal` pre-targeting that exact item.
+2. **Payload Delivery**:
+   - Modal receives item name, original quantity, refunded quantity, remaining refundable quantity, unit price, and optional reason.
+3. **Execution & Immutability**:
+   - On confirmation, `applyPartialRefundToSale` generates a reversal transaction referencing `originalTransactionId`.
+   - The original sale in state is updated immutably with cumulative `refundedAmount` and line `refundedQuantity`.
+   - The open detail view (`selectedTx`) is immediately updated with the refreshed record.
+   - The reversal transaction is prepended to the ledger, automatically updating filters and summary analytics.
+4. **Cancellation**:
+   - Closing or clicking "Cancel" dismisses the modal with zero mutations to the sales collection.
+5. **Eligibility Progression**:
+   - Remaining refundable quantities update live.
+   - If an item's remaining quantity reaches 0, its inline action renders "Refunded" and blocks further input.
+   - When all items or the entire balance are refunded, `isSaleEligibleForRefund` evaluates to false, hiding the "Issue Refund" action and transitioning the sale status to `'Refunded'`.
+
+#### 3. Test Coverage (`src/data/refund9F3C.test.ts`)
+- Open refund modal and pass correct sale / item targets.
+- Modal payload validation (all required financial fields).
+- Valid partial refund confirmation and reversal transaction creation.
+- Cancel action zero-mutation safety.
+- State, remaining quantity, and eligibility transitions across consecutive partial refunds.
+- Fully refunded items blocked from subsequent refunds.
+- Invalid quantities rejected.
+- Existing Sales data and filters regression verification.
+
+---
+
+### 13.I Step 9F-3D — Multiple Partial Refunds & Cumulative Calculation Engine
+
+The partial refund engine supports multiple consecutive partial refunds on the same sale item and across different items in a sale while strictly preserving cumulative quantity and financial consistency:
+
+#### 1. Core Mathematical Model & Invariants
+1. **Total Refunded Quantity**:
+   - `totalRefundedQuantity = sum(partialRefundQuantities)`
+   - Computed via `getTotalRefundedQuantity(item.refundedQuantity)`.
+2. **Remaining Quantity Calculation**:
+   - `remainingQuantity = Math.max(0, originalQuantity - totalRefundedQuantity)`
+   - Computed via `calculateRemainingQuantity(originalQuantity, totalRefundedQuantity)`.
+   - Never returns negative numbers; original quantity (`item.quantity`) remains permanently untouched.
+3. **Remaining Refundable Amount**:
+   - `remainingRefundableAmount = Math.max(0, Math.round((originalAmount - cumulativeRefundedAmount) * 100) / 100)`
+   - Computed via `getRefundableAmount(originalAmount, refundedAmount)`.
+4. **Over-Refund Protection**:
+   - Every new partial refund request evaluates against the latest remaining quantity (`canApplyAdditionalRefund` & `validateMultiplePartialRefund`).
+   - If `requestedQuantity > remainingQuantity`, the refund is strictly rejected with a clear descriptive message (`"Refund quantity (X) exceeds remaining refundable quantity (Y)."`).
+   - Once `remainingQuantity === 0`, further refund attempts are permanently blocked with `"This item has already been fully refunded."`
+5. **Separate Sequential Audit Records**:
+   - Each refund generates a distinct reverse transaction with an incremented sequence number and order number:
+     - Refund #1: `${sale.orderNumber}-REF` (sequence: 1)
+     - Refund #2: `${sale.orderNumber}-REF-2` (sequence: 2)
+     - Refund #3: `${sale.orderNumber}-REF-3` (sequence: 3)
+   - The original transaction maintains `refundCount` and `refundIds: string[]` linking all reversals.
+
+#### 2. Multi-Item Lifecycle Example
+- **Initial**: Sale `#ORD-MULTI-901` with 5x Pork Ramen @ $10.00 ($50.00).
+- **Refund #1**: Quantity = 1 → Remaining = 4. Reverse transaction `#ORD-MULTI-901-REF` (-$10.00).
+- **Refund #2**: Quantity = 2 → Remaining = 2. Reverse transaction `#ORD-MULTI-901-REF-2` (-$20.00).
+- **Refund #3**: Quantity = 2 → Remaining = 0. Reverse transaction `#ORD-MULTI-901-REF-3` (-$20.00).
+- **Completion**: Sale transitions to `status: 'Refunded'`, `paymentStatus: 'Refunded'`. Additional refund requests are rejected.
+
+#### 3. Test Coverage (`src/data/refund9F3D.test.ts`)
+All 12 focused test suites verified:
+1. `Original quantity 5 → refund 1 → remaining 4`.
+2. `Refund another 2 → remaining 2`.
+3. `Refund remaining 2 → remaining 0` with status transition to `'Refunded'`.
+4. `Attempt another refund → rejected` once exhausted.
+5. `Refund 3 + refund 3 on quantity 5 → second refund rejected` (over-refund guard).
+6. `Multiple partial refunds on different items` (Ramen & Gyoza independent updates).
+7. `Correct total refunded quantity` helper verification.
+8. `Correct remaining quantity` calculation verification.
+9. `Correct total refunded amount` calculation verification.
+10. `Original sale remains unchanged` (zero in-place mutation).
+11. `No negative remaining quantity` invariant clamp verification.
+12. `No duplicate/over-refund` guard verification.
+
+---
+
+### 13.J Step 9F-3E — Final Partial Refund Testing, Cleanup & Verification
+
+A comprehensive audit, dead-code cleanup, and full regression verification pass was completed across the entire partial refund subsystem (Steps 9F-3A through 9F-3D):
+
+#### 1. Architecture & Separation of Concerns Summary
+- **Calculations & Validation (`src/utils/refundUtils.ts`)**: Pure math functions (`getRefundableQuantity`, `getRefundableAmount`, `calculatePartialRefundAmount`, `canRefundQuantity`, `validatePartialRefundQuantity`, `getTotalRefundedQuantity`, `calculateRemainingQuantity`, `canApplyAdditionalRefund`, `validateMultiplePartialRefund`). Fully isolated with zero React or UI dependencies.
+- **Business Engine & Transaction Generator (`src/utils/refundRules.ts`)**: Core validation against the 10 business rules, immutable state application (`applyPartialRefundToSale`), and sequential reversal transaction generation (`createRefundTransaction`).
+- **State & Workflow Hook (`src/hooks/usePartialRefund.ts`)**: Encapsulates modal open/close lifecycle, targeted sale and item tracking, and transaction execution dispatching.
+- **UI Presentational Layer (`src/components/sales/PartialRefundModal.tsx`)**: Modal showing active item details, original/refunded/remaining breakdown cards, stepper controls, numeric input, live subtotal display, optional reason input, and auto-disabling submit guard.
+- **Details Trigger View (`src/components/sales/SaleDetailModal.tsx`)**: In-table row actions ("Refund" button per line) and global "Issue Refund" button with dynamic visibility based on remaining eligibility.
+
+#### 2. Verified Test Scenarios
+- **Refund 1 of 5**: Verified; remaining updates to 4, reverse transaction `#ORD-REF` generated.
+- **Refund 2 of remaining 4**: Verified; remaining updates to 2, reverse transaction `#ORD-REF-2` generated.
+- **Refund remaining 2**: Verified; remaining updates to 0, reverse transaction `#ORD-REF-3` generated, sale status transitions to `'Refunded'`.
+- **Attempt refund after quantity reaches 0**: Permanently rejected with `"This item has already been fully refunded."`
+- **Refund multiple different items**: Independent item tracking verified without cross-contamination.
+- **Invalid quantity = 0**: Strictly rejected with `"Refund quantity must be at least 1."`
+- **Negative quantity**: Strictly rejected with `"Refund quantity must be at least 1."`
+- **Quantity greater than remaining**: Strictly rejected with `"Refund quantity (X) exceeds remaining refundable quantity (Y)."`
+- **Refund amount greater than refundable amount**: Blocked by transaction validation guard.
+- **Cancel refund**: Modal dismisses cleanly; zero mutations to sales records or ledger.
+- **Successful refund**: Ledger updated immutably with prepended reversal record, original sale refreshed in detail view, and state propagated to parent context.
+- **Multiple consecutive refunds**: Sequential sequence numbering and cumulative financial tracking verified.
+
+#### 3. Code Quality & Cleanup Results
+- **Unused imports/variables**: Audited; 0 unused imports or dead code across all modified files.
+- **Duplicate logic**: Eliminated by delegating all calculations to `refundUtils.ts`.
+- **TypeScript safety**: Strict zero errors under `tsc --noEmit`.
+- **Bundle size**: Production bundle verified under `vite build` (`dist/assets/index-DQ9vWCsU.js: 453.75 kB │ gzip: 125.56 kB`).
+- **Regression test suite**: 12 test suites executed with 100% pass rate (`sales9A`, `sales9B`, `sales9C`, `sales9D`, `sales9E`, `sales9F`, `products`, `permissions`, `refund9F3`, `refund9F3B`, `refund9F3C`, `refund9F3D`).
+
+---
+
+### 13.K Step 9F-4A — Full Refund Business Logic (`refundUtils.ts`)
+
+Pure mathematical logic and domain boundary rules were established for full refund workflows:
+
+#### 1. Core Rule & Calculation Model
+A full refund refunds **all remaining refundable quantities and balances**, rather than re-refunding the original sold quantity:
+- If `originalQuantity = 5` and `alreadyRefunded = 2`:
+  - `getFullRefundQuantity(5, 2) === 3`
+  - `remainingQuantity` transitions to `0`.
+  - The item is never over-refunded by re-issuing a refund for 5.
+- If `originalAmount = $50.00` and `alreadyRefunded = $20.00`:
+  - `getFullRefundAmount(50.00, 20.00) === 30.00`
+  - Reversal transaction amount is strictly `-$30.00`.
+- Once `remainingQuantity === 0`, `canApplyFullRefund` returns `false`, and `getFullRefundQuantity` returns `0`.
+
+#### 2. Key Utility Functions
+```typescript
+// 1. Calculate remaining refundable quantity for full refund
+export function getFullRefundQuantity(
+  originalQuantity?: number | null,
+  refundedQuantity?: number | null
+): number;
+
+// 2. Calculate remaining refundable balance for full refund
+export function getFullRefundAmount(
+  originalAmount?: number | null,
+  refundedAmount?: number | null
+): number;
+
+// 3. Predicate checking whether a full refund is applicable
+export function canApplyFullRefund(
+  originalQuantity?: number | null,
+  refundedQuantity?: number | null
+): boolean;
+
+// 4. Line item refund calculation for remaining quantities
+export function calculateItemFullRefundAmount(
+  unitPrice: number,
+  originalQuantity?: number | null,
+  refundedQuantity?: number | null
+): number;
+```
+
+#### 3. Test Coverage (`src/data/refund9F4.test.ts`)
+1. **Full refund with no previous refund**: 5 of 5 refunded ($50.00); status transitions to `'Refunded'`.
+2. **Full refund after a partial refund**: 5 sold, 2 partially refunded ($20.00); full refund correctly refunds remaining 3 ($30.00), NOT 5.
+3. **Full refund after multiple partial refunds**: 6 sold, partial 1 + partial 2; full refund correctly refunds remaining 3 ($24.00).
+4. **Already fully refunded item returns quantity 0**: When exhausted, returns 0 quantity, $0.00 amount, and `canApplyFullRefund === false`.
+5. **Full refund amount is correct**: Line-level unit price calculation and multi-item balance verification.
+6. **No negative quantity or amount**: Safe clamp to `>= 0`.
+7. **No over-refund**: Rejects attempts to refund original quantity when items were already partially refunded.
+8. **Original sale data is not mutated**: Zero in-place mutation of transaction objects or line items.
+
+
+---
+
+### 13.L Step 9F-4B — Full Refund Confirmation UI (`FullRefundModal.tsx`)
+
+A dedicated, isolated modal component was created at `src/components/sales/FullRefundModal.tsx` for confirming a full refund without polluting `Sales.tsx` or altering the existing partial refund flow:
+
+#### 1. Architecture & Design Principles
+- **Separation of Concerns**: The UI component handles presentation and user interaction only. All financial totals and remaining quantity calculations strictly reuse pure functions from `src/utils/refundUtils.ts` (`getFullRefundAmount`, `getFullRefundQuantity`, `canApplyFullRefund`).
+- **Modal Reuse**: Reuses the core UI modal wrapper (`src/components/ui/Modal.tsx`) with cohesive POS/admin styling.
+- **Fixed Quantity Invariant**: Unlike `PartialRefundModal`, the user cannot edit refund quantities. A full refund automatically operates on the entire remaining refundable quantity and amount.
+
+#### 2. UI Layout & UX Elements
+1. **Sale & Order Header**:
+   - Order number display (`#ORD-...`) and customer / table badge.
+   - Status badge indicating either `'Refund Eligible'` or `'Fully Refunded'`.
+2. **Warning & Explanatory Callout**:
+   - Clear amber notification: *"This will refund the entire remaining refundable amount ($X.XX)."*
+   - Clear exhaustion notice if already fully refunded: *"This sale has already been fully refunded. No remaining refundable balance available."*
+3. **Itemized Refund Breakdown**:
+   - List of order items showing item name, unit price, and read-only quantity badge (e.g., *"Refund 3 of 5"* or *"0 remaining (Refunded)"*).
+4. **Three-Column Financial Summary**:
+   - Original Amount
+   - Already Refunded Amount
+   - Remaining Refundable Amount
+5. **Prominent Full Refund Amount Banner**:
+   - Displays the net reversal amount prominently formatted with a minus sign (e.g., `-$45.00`).
+6. **Optional Refund Reason Field**:
+   - Pre-populated with default `"Customer Request — Full Refund"`, fully editable, and disabled when sale is exhausted.
+7. **Action Buttons**:
+   - **Cancel Button**: Invokes `onClose` callback to dismiss without mutating state.
+   - **Confirm Full Refund Button**: Dynamically displays the refundable amount and is disabled when remaining balance is zero or sale is ineligible.
+
+#### 3. Test Coverage (`src/data/refund9F4B.test.ts`)
+All 9 verification checkpoints verified:
+1. **Modal Opens**: Renders correctly when open with sale data; returns null when closed.
+2. **Correct Sale/Order**: Displays matching order number, customer name, and table.
+3. **Correct Remaining Refundable Amount**: Accurately computes and formats remaining balance (`origAmount - refundedAmount`).
+4. **Correct Item Information**: Renders line item names, unit prices, and remaining quantities.
+5. **Full Refund Amount Displayed**: Prominently displays the full refund total.
+6. **Already Fully Refunded Protection**: Disables confirmation button and renders exhaustion badge when balance is 0.
+7. **Cancel Closes Modal**: Verifies modal dismissal upon cancel trigger.
+8. **Confirm Button Availability**: Active and clickable when remaining refundable amount > 0.
+9. **Optional Reason Input**: Sanitizes and passes custom reason text to callback.
+
+---
+
+### 13.M Step 9F-4C — Connect Full Refund to Existing Flow (`useFullRefund.ts` & `applyFullRefundToSale`)
+
+The full refund modal was connected to the live transactional ledger through dedicated state coordination and domain rules:
+
+#### 1. Architecture & Clean Separation
+- **`src/utils/refundUtils.ts`**: Pure calculation functions (`getFullRefundQuantity`, `getFullRefundAmount`, `canApplyFullRefund`).
+- **`src/utils/refundRules.ts` (`applyFullRefundToSale`)**:
+  - Validates sale eligibility.
+  - Dynamically calculates the exact remaining quantity for every item with `remQty > 0`.
+  - Calculates line subtotals and creates the reversal transaction.
+  - Immutably marks all remaining quantities as refunded and sets cumulative `refundedAmount = sale.amount`.
+  - Sets transaction status and payment status to `'Refunded'`.
+  - Preserves the original sale object and records sequential audit trails (`refundCount` and `refundIds`).
+- **`src/hooks/useFullRefund.ts`**:
+  - Manages `saleToFullRefund`, `isFullRefundModalOpen`, and `fullRefundError`.
+  - Exposes `openFullRefundModal`, `closeFullRefundModal`, and `handleConfirmFullRefund`.
+  - Implements atomic error handling: does not dismiss modal or partially update state if refund execution fails.
+- **`src/components/sales/FullRefundModal.tsx`**: Presentational modal displaying breakdown, error callouts, and dispatching confirmation.
+- **`src/components/sales/SaleDetailModal.tsx`**: Added `onOpenFullRefund` prop to render "Full Refund" action directly in the modal footer.
+- **`src/pages/dashboard/Sales.tsx`**: Coordinates `useFullRefund` and synchronizes local ledger, active sale inspection, and root `onRefundSale` callback without bloating component logic.
+
+#### 2. Workflow & Invariants
+1. **Triggering Full Refund**:
+   - The user opens `SaleDetailModal` on an eligible sale and clicks "Full Refund".
+   - `openFullRefundModal(sale)` sets the active sale and opens `FullRefundModal`.
+2. **Execution**:
+   - On clicking "Confirm Full Refund", `handleConfirmFullRefund` invokes `applyFullRefundToSale`.
+   - Remaining quantities and balance drop to 0.
+   - Status switches to `'Refunded'`.
+   - Reversal transaction is prepended to the sales ledger.
+3. **Cancel & Error Safety**:
+   - Clicking "Cancel" closes the modal with zero mutations.
+   - If an error occurs (e.g. sale already refunded), an error banner renders and state remains pristine.
+4. **Subsequent Refund Prevention**:
+   - Further refund actions on the sale are disabled and rejected with an explicit error.
+
+#### 3. Test Coverage (`src/data/refund9F4C.test.ts`)
+All 12 focused integration checkpoints verified:
+1. **Open Full Refund modal**: Verifies state transition and modal opening.
+2. **Correct sale/item passed**: Accurately delivers order number, customer, and item lines.
+3. **Correct remaining quantity**: Accurately computes remaining balances across active and exhausted items.
+4. **Correct refundable amount**: Multi-currency amount precision verified (USD and KHR).
+5. **Successful full refund**: Reversal transaction created, cumulative amounts synced, status updated.
+6. **Full refund after previous partial refund**: Properly refunds only remaining balance ($30.00 of $40.00 after $10.00 partial refund).
+7. **Already fully refunded item rejected**: Throws clear error and prevents double refunds.
+8. **Cancel does not modify data**: Preserves sales ledger and transaction data immutably.
+9. **Refund reason saved**: Custom reasons and fallback defaults persisted to reversal transactions.
+10. **Original sale remains unchanged**: Guarantees zero in-place mutation of transaction objects.
+11. **Refund history remains available**: Preserves chronological refund records with linked IDs.
+12. **Duplicate full refund prevented**: Blocks redundant subsequent full refunds.
+
+---
+
+## 14. Known Limitations & Next Steps
+
+1. **Step 9F-4D**: Final Full Refund Review & Regression Verification.
+2. **Sales Reports (Step 10)**: Aggregate analytics, station reports, and chart exports.

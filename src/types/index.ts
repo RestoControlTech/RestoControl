@@ -76,6 +76,27 @@ export interface SaleItem {
   unitPrice: number;
   subtotal?: number;
   cost?: number;
+  refundedQuantity?: number;
+}
+
+export interface RefundItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  originalItemId?: string;
+}
+
+export interface RefundRequestItem {
+  name: string;
+  quantity: number;
+  unitPrice?: number;
+}
+
+export interface RefundRequest {
+  items: RefundRequestItem[];
+  reason?: string;
+  customAmount?: number;
 }
 
 export interface Transaction {
@@ -98,6 +119,13 @@ export interface Transaction {
   amountPaid?: number;
   paymentStatus?: 'Paid' | 'Refunded' | 'Pending';
   notes?: string;
+  originalTransactionId?: string;
+  originalOrderNumber?: string;
+  refundedAmount?: number;
+  refundReason?: string;
+  refundCount?: number;
+  refundSequence?: number;
+  refundIds?: string[];
 }
 
 export type Sale = Transaction;
