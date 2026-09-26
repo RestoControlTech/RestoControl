@@ -14,7 +14,7 @@ The Sales History module provides administrative staff and restaurant managers w
 - **Dual Currency Support (USD & KHR)**: Financial amounts are dynamically formatted depending on transaction currency (USD formatted with `$XX.XX`, KHR formatted with `XX,XXX ៛`).
 - **Thermal Receipt Layout**: Dedicated, POS-friendly 80mm printable layout with branding, itemized table, tender breakdown, and clean browser print triggers.
 - **Read-Only Receipt**: Protects transaction records from accidental modification.
-- **Zero Backend Dependency**: State operates deterministically in memory, populated initially from mock data and updated reactively when orders are submitted.
+- **Zero Backend Dependency**: State operates deterministically in memory, starting clean in production runtime and updated reactively when orders and payments are submitted (isolated test fixtures are provided in `src/data/mockData.ts` for automated test suites).
 - **RBAC Governed**: Route access and export capabilities are governed by the existing `sales.view` permission (granted to Administrators, restricted from Staff).
 
 ---
