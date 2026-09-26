@@ -3,18 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
-import { ShoppingCart, ArrowRight, X, Check } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ShoppingCart, ArrowRight, Check } from 'lucide-react';
 import { MenuItem, Category, CartItem } from '../../types';
 import { formatPrice } from '../../utils/format';
 import {
   Button,
-  Badge,
   SearchBar,
   LoadingState,
   EmptyState,
   ErrorState,
 } from '../../components/ui';
+import { CartDrawer, QRProductCard } from '../../components/customer';
 
 interface QRMenuProps {
   initialMenuItems: MenuItem[];
@@ -27,29 +27,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   const [currentCategory, setCurrentCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [uiState, setUiState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
-  const [cart, setCart] = useState<Record<string, CartItem>>({
-    'food-2': {
-      id: 'food-2',
-      name: 'Spicy Salmon Roll',
-      image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&auto=format&fit=crop&q=80',
-      unitPrice: 8.50,
-      quantity: 1
-    },
-    'food-7': {
-      id: 'food-7',
-      name: 'Pork Gyoza 5pc',
-      image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400&auto=format&fit=crop&q=80',
-      unitPrice: 6.50,
-      quantity: 1
-    },
-    'food-10': {
-      id: 'food-10',
-      name: 'Yuzu Soda',
-      image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&auto=format&fit=crop&q=80',
-      unitPrice: 3.50,
-      quantity: 1
-    }
-  });
+  const [cart, setCart] = useState<Record<string, CartItem>>({});
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -247,94 +225,15 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
           {/* 1. NORMAL STATE GRID: Dual columns compact tiles */}
           {uiState === 'normal' && filteredItems.length > 0 && (
             <div id="food-grid-view" className="grid grid-cols-2 gap-2.5">
-              {filteredItems.map(item => {
-                const cartQty = cart[item.id]?.quantity || 0;
-                return (
-                  <article
-                    key={item.id}
-                    className="bg-white border border-stone-200/90 rounded-2xl p-2 flex flex-col justify-between hover:border-stone-300 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.03)] group"
-                  >
-                    {/* Food thumbnail image with absolute badge */}
-                    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-stone-100 mb-2">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        loading="lazy"
-                        className={`w-full h-full object-cover transition-transform duration-300 ${
-                          item.inStock ? 'group-hover:scale-105' : 'opacity-40 grayscale'
-                        }`}
-                      />
-                      {item.badge && item.inStock && (
-                        <span className="absolute top-1.5 left-1.5 bg-stone-900/80 backdrop-blur-xs text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-md uppercase">
-                          {item.badge}
-                        </span>
-                      )}
-                      {!item.inStock && (
-                        <div className="absolute inset-0 bg-stone-900/40 flex items-center justify-center p-1">
-                          <span className="bg-red-600 text-white font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs text-center leading-tight">
-                            Unavailable
-                          </span>
-                        </div>
-                      )}
-                      {cartQty > 0 && (
-                        <span className="absolute top-1.5 right-1.5 bg-orange-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
-                          {cartQty}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Food text info */}
-                    <div className="px-1 flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-extrabold text-stone-900 text-xs leading-tight line-clamp-1 mb-0.5">{item.name}</h3>
-                        <p className="text-[10px] text-stone-500 line-clamp-1 mb-2 leading-relaxed">{item.description}</p>
-                      </div>
-
-                      {/* Add button or steppers */}
-                      <div className="flex items-center justify-between pt-1 border-t border-stone-100 mt-auto">
-                        <span className="font-bold text-stone-900 text-xs">{formatPrice(item.price)}</span>
-                        
-                        <div>
-                          {!item.inStock ? (
-                            <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md border border-stone-200/80">
-                              Unavailable
-                            </span>
-                          ) : cartQty === 0 ? (
-                            <Button
-                              onClick={() => addToCart(item)}
-                              variant="primary"
-                              size="xs"
-                              className="h-7 px-2.5"
-                            >
-                              <span>+ Add</span>
-                            </Button>
-                          ) : (
-                            <div className="flex items-center bg-stone-100 rounded-lg p-0.5 border border-stone-200/80">
-                              <button
-                                type="button"
-                                onClick={() => decrementItem(item.id)}
-                                className="w-6 h-6 rounded-md bg-white hover:bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold transition-colors shadow-xs active:scale-90 cursor-pointer"
-                              >
-                                −
-                              </button>
-                              <span className="px-1.5 min-w-[18px] text-center text-[11px] font-black text-stone-800">{cartQty}</span>
-                              <button
-                                type="button"
-                                onClick={() => addToCart(item)}
-                                className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-xs font-bold transition-colors shadow-xs active:scale-90 cursor-pointer"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                      </div>
-                    </div>
-
-                  </article>
-                );
-              })}
+              {filteredItems.map(item => (
+                <QRProductCard
+                  key={item.id}
+                  item={item}
+                  cartQuantity={cart[item.id]?.quantity || 0}
+                  onAddToCart={addToCart}
+                  onDecrement={decrementItem}
+                />
+              ))}
             </div>
           )}
 
@@ -411,86 +310,17 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
           </aside>
         )}
 
-        {/* Modal Slide-Up Drawer wrapper */}
-        {isCartOpen && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end justify-center">
-            <div className="bg-white w-full max-w-[420px] rounded-t-2xl shadow-2xl p-4 max-h-[80vh] flex flex-col border-t border-stone-200 animate-slide-up">
-              
-              {/* Header drawer info */}
-              <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-                <div>
-                  <h3 className="font-extrabold text-stone-900 text-sm">Your Order</h3>
-                  <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">{tableName} · Send to Kitchen</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCartOpen(false)}
-                  className="p-1.5 rounded-lg text-stone-400 hover:bg-stone-100 active:scale-95 cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Items checklist rows */}
-              <div className="py-3 overflow-y-auto divide-y divide-stone-100 flex-1 space-y-1">
-                {Object.values(cart).map(cartItem => {
-                  const lineTotal = cartItem.unitPrice * cartItem.quantity;
-                  return (
-                    <div key={cartItem.id} className="flex items-center justify-between py-2.5">
-                      <div className="flex items-center gap-2.5 pr-2 flex-1 min-w-0">
-                        <img src={cartItem.image} alt={cartItem.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                        <div className="min-w-0">
-                          <div className="font-bold text-stone-800 text-xs truncate">{cartItem.name}</div>
-                          <div className="text-[10px] text-stone-400 font-semibold">{formatPrice(cartItem.unitPrice)} each</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        <div className="flex items-center bg-stone-100 rounded-lg p-0.5 border border-stone-200/80">
-                          <button
-                            type="button"
-                            onClick={() => decrementItem(cartItem.id)}
-                            className="w-6 h-6 rounded-md bg-white hover:bg-stone-200 text-stone-700 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
-                          >
-                            −
-                          </button>
-                          <span className="px-1.5 min-w-[18px] text-center text-xs font-black text-stone-800">{cartItem.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => addToCart({ id: cartItem.id, name: cartItem.name, image: cartItem.image, price: cartItem.unitPrice } as MenuItem)}
-                            className="w-6 h-6 rounded-md bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
-                          >
-                            +
-                          </button>
-                        </div>
-                        <span className="font-mono font-bold text-xs text-stone-900 w-14 text-right">{formatPrice(lineTotal)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Bottom fire actions CTA */}
-              <div className="pt-3 border-t border-stone-100 space-y-3 shrink-0">
-                <div className="flex justify-between items-center text-xs font-black">
-                  <span className="text-stone-500 uppercase tracking-wider">Subtotal</span>
-                  <span className="text-stone-900 font-extrabold text-sm">{formatPrice(cartTotal)}</span>
-                </div>
-                
-                <Button
-                  onClick={handleKitchenSubmit}
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  iconRight={<Check className="w-4 h-4" />}
-                >
-                  Send Order to Kitchen
-                </Button>
-              </div>
-
-            </div>
-          </div>
-        )}
+        {/* Modal Slide-Up Cart Drawer */}
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          tableName={tableName}
+          cart={cart}
+          cartTotal={cartTotal}
+          onAddToCart={addToCart}
+          onDecrementItem={decrementItem}
+          onSubmitOrder={handleKitchenSubmit}
+        />
 
         {/* In-app Action Notification Toast alerts */}
         {toastMessage && (

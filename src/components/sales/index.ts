@@ -9,4 +9,5 @@ export * from './SalesFilters';
 export * from './SalesSummary';
 export * from './PartialRefundModal';
 export * from './FullRefundModal';
-
+export * from './SalesTable';
+export * from './SalePaymentSummary';

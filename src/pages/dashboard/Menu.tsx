@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { MenuItem, Category } from '../../types';
-import { CATEGORIES } from '../../data/mockData';
 import { EmptyState } from '../../components/ui';
 import { useMenu } from '../../hooks/useMenu';
 import {
@@ -19,6 +18,8 @@ import {
   DeleteProductModal,
   CategoryManager,
 } from '../../components/menu';
+
+const DEFAULT_CATEGORIES: Category[] = [{ id: 'all', label: 'All Items' }];
 
 interface MenuProps {
   menuItems: MenuItem[];
@@ -35,7 +36,7 @@ interface MenuProps {
 
 export default function Menu({
   menuItems,
-  categories = CATEGORIES,
+  categories = DEFAULT_CATEGORIES,
   onToggleStock,
   onAddItem,
   onEditItem,

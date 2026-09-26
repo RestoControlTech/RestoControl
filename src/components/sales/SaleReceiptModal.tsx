@@ -4,7 +4,7 @@
  */
 
 import React, { useRef } from 'react';
-import { Printer, X, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Printer, X } from 'lucide-react';
 import { Transaction } from '../../types';
 import { formatPrice } from '../../utils/format';
 import { Modal, Button, Badge } from '../ui';

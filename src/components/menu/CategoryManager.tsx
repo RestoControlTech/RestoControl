@@ -180,9 +180,16 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {categories
-                  .filter((c) => c.id !== 'all')
-                  .map((cat) => {
+                {categories.filter((c) => c.id !== 'all').length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6 text-slate-400 text-xs font-medium">
+                      No categories created yet. Add your first category above.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  categories
+                    .filter((c) => c.id !== 'all')
+                    .map((cat) => {
                     const count = menuItems.filter((i) => i.category === cat.id).length;
                     return (
                       <TableRow key={cat.id}>
@@ -231,7 +238,8 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                         </TableCell>
                       </TableRow>
                     );
-                  })}
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
