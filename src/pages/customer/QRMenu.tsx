@@ -27,7 +27,38 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   const [currentCategory, setCurrentCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [uiState, setUiState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
-  const [cart, setCart] = useState<Record<string, CartItem>>({});
+  const [cart, setCart] = useState<Record<string, CartItem>>({
+    'food-2': {
+      id: 'food-2',
+      productId: 'food-2',
+      name: 'Spicy Salmon Roll',
+      image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&auto=format&fit=crop&q=80',
+      price: 8.50,
+      unitPrice: 8.50,
+      quantity: 1,
+      lineTotal: 8.50,
+    },
+    'food-7': {
+      id: 'food-7',
+      productId: 'food-7',
+      name: 'Pork Gyoza 5pc',
+      image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400&auto=format&fit=crop&q=80',
+      price: 6.50,
+      unitPrice: 6.50,
+      quantity: 1,
+      lineTotal: 6.50,
+    },
+    'food-10': {
+      id: 'food-10',
+      productId: 'food-10',
+      name: 'Yuzu Soda',
+      image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&auto=format&fit=crop&q=80',
+      price: 3.50,
+      unitPrice: 3.50,
+      quantity: 1,
+      lineTotal: 3.50,
+    }
+  });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -38,7 +69,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   }, [cart]);
 
   const cartTotal = useMemo(() => {
-    return Object.values(cart).reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    return Object.values(cart).reduce((sum, item) => sum + item.lineTotal, 0);
   }, [cart]);
 
   // Toast feedback helper
@@ -51,15 +82,24 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   const addToCart = (item: MenuItem) => {
     setCart(prev => {
       const next = { ...prev };
-      if (next[item.id]) {
-        next[item.id] = { ...next[item.id], quantity: next[item.id].quantity + 1 };
+      const existingItem = next[item.id];
+      if (existingItem) {
+        const nextQty = existingItem.quantity + 1;
+        next[item.id] = {
+          ...existingItem,
+          quantity: nextQty,
+          lineTotal: existingItem.price * nextQty
+        };
       } else {
         next[item.id] = {
           id: item.id,
+          productId: item.id,
           name: item.name,
           image: item.image,
+          price: item.price,
           unitPrice: item.price,
-          quantity: 1
+          quantity: 1,
+          lineTotal: item.price,
         };
       }
       return next;
@@ -70,10 +110,16 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   const decrementItem = (itemId: string) => {
     setCart(prev => {
       const next = { ...prev };
-      if (!next[itemId]) return prev;
-      
-      if (next[itemId].quantity > 1) {
-        next[itemId] = { ...next[itemId], quantity: next[itemId].quantity - 1 };
+      const itemToDec = next[itemId];
+      if (!itemToDec) return prev;
+
+      if (itemToDec.quantity > 1) {
+        const nextQty = itemToDec.quantity - 1;
+        next[itemId] = {
+          ...itemToDec,
+          quantity: nextQty,
+          lineTotal: itemToDec.price * nextQty,
+        };
       } else {
         delete next[itemId];
       }
@@ -98,15 +144,15 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
     if (uiState !== 'normal') return [];
 
     let list = initialMenuItems;
-    
+
     if (currentCategory !== 'all') {
       list = list.filter(item => item.category === currentCategory);
     }
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
-      list = list.filter(item => 
-        item.name.toLowerCase().includes(q) || 
+      list = list.filter(item =>
+        item.name.toLowerCase().includes(q) ||
         item.description.toLowerCase().includes(q)
       );
     }
@@ -116,13 +162,13 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
   return (
     <div id="customer-view-container" className="bg-stone-100 min-h-screen flex justify-center selection:bg-orange-100 selection:text-orange-900 font-sans antialiased">
-      
+
       {/* Simulated Mobile Core Framework */}
       <div id="simulated-mobile-frame" className="w-full max-w-[420px] bg-white min-h-screen flex flex-col shadow-2xl relative border-x border-stone-200">
-        
+
         {/* Sticky Mobile Header bar */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-100 shrink-0">
-          
+
           <div className="px-4 pt-3.5 pb-2 flex items-center justify-between">
             {/* Restaurant Profile details */}
             <div className="flex items-center gap-2.5">
@@ -170,11 +216,10 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                     setCurrentCategory(cat.id);
                     if (uiState !== 'normal') setUiState('normal');
                   }}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                    isActive
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${isActive
                       ? 'bg-stone-900 text-white shadow-sm'
                       : 'bg-stone-100 text-stone-600 hover:bg-stone-200/80 hover:text-stone-900'
-                  }`}
+                    }`}
                 >
                   <span>{cat.label}</span>
                 </button>
@@ -197,11 +242,10 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
                 key={s}
                 type="button"
                 onClick={() => setUiState(s)}
-                className={`px-1.5 py-0.5 rounded capitalize leading-none cursor-pointer ${
-                  uiState === s
+                className={`px-1.5 py-0.5 rounded capitalize leading-none cursor-pointer ${uiState === s
                     ? 'bg-stone-800 text-white font-black'
                     : 'hover:bg-stone-200 text-stone-500'
-                }`}
+                  }`}
               >
                 {s}
               </button>
@@ -211,7 +255,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
         {/* Core items scroll area panel */}
         <main className="flex-1 px-3.5 pt-3 pb-28 overflow-y-auto">
-          
+
           {/* Header row stats count */}
           {uiState === 'normal' && (
             <div className="flex items-center justify-between mb-2.5 px-0.5">
@@ -274,7 +318,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
               onClick={() => setIsCartOpen(true)}
               className="bg-stone-900 text-white rounded-2xl p-3 shadow-xl border border-stone-800/80 flex items-center justify-between cursor-pointer hover:bg-stone-850 transition-colors select-none"
             >
-              
+
               {/* Cart contents labels */}
               <div className="flex items-center gap-2.5 pl-1">
                 <div className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-stone-800 text-orange-400">

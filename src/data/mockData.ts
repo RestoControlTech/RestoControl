@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { MenuItem, Category, Table, StaffMember, Transaction } from '../types';
+import { MenuItem, Category, Table, StaffMember, Transaction, Customer } from '../types';
 
 export const MENU_ITEMS: MenuItem[] = [
   {
@@ -347,4 +347,12 @@ export const TRANSACTIONS_DATA: Transaction[] = [
     ],
     subtotal: 82000,
   }
+];
+
+export const CUSTOMERS_DATA: Customer[] = [
+  { id: 'c-walkin', name: 'Walk-in Customer' },
+  { id: 'c-dara', name: 'Dara', phone: '+855 12 345 678' },
+  { id: 'c-sokha', name: 'Sokha', phone: '+855 77 890 123' },
+  { id: 'c-001', name: 'Customer 001', phone: '+855 98 765 432' },
+  { id: 'c-elena', name: 'Elena Vance', phone: '+1 555-0192' }
 ];

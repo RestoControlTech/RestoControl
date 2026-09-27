@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
-import { MenuItem, Category, Table, StaffMember, Transaction } from './types';
+import { MenuItem, Category, Table, StaffMember, Transaction, Order } from './types';
+import { MOCK_ORDERS } from './data/orders';
 import { AppRoutes } from './routes';
 
 // Base initial layout for restaurant tables
@@ -31,7 +32,30 @@ function AppContent() {
   const [tables, setTables] = useState<Table[]>(INITIAL_TABLES);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+
+  // Handle creating order from POS
+  const handleOrderCreate = (newOrder: Order) => {
+    setOrders((prev) => [newOrder, ...prev]);
+
+    // Update table status to occupied if applicable
+    setTables((prev) =>
+      prev.map((t) => (t.name === newOrder.table ? { ...t, status: 'Occupied' } : t))
+    );
+
+    // Create sales transaction record
+    const newTx: Transaction = {
+      id: `tx-${Date.now()}`,
+      orderNumber: newOrder.orderNumber,
+      dateTime: 'Just Now',
+      table: newOrder.table,
+      type: newOrder.orderType === 'Takeaway' ? 'Takeaway' : 'Dine-in',
+      amount: newOrder.total,
+      status: 'Receipt',
+    };
+    setTransactions((prev) => [newTx, ...prev]);
+  };
+
   // App routing search filter states
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -69,32 +93,31 @@ function AppContent() {
     setCategories(prev => prev.filter(c => c.id !== categoryId));
   };
 
-  const handleToggleTableStatus = (tableId: string) => {
-    setTables(prev => prev.map(t => 
-      t.id === tableId 
-        ? { ...t, status: t.status === 'Occupied' ? 'Available' : 'Occupied' } 
-        : t
-    ));
-  };
-
   const handleToggleStaffShift = (staffId: string) => {
     setStaffList(prev => prev.map(s => 
-      s.id === staffId 
-        ? { ...s, status: s.status === 'Active' ? 'Off Duty' : 'Active' } 
-        : s
+      s.id === staffId ? { ...s, status: s.status === 'Active' ? 'Off Duty' : 'Active' } : s
     ));
   };
 
-  const handleAddStaff = (newMember: StaffMember) => {
-    setStaffList(prev => [newMember, ...prev]);
+  const handleAddStaff = (newStaff: StaffMember) => {
+    setStaffList(prev => [...prev, newStaff]);
   };
 
-  const handleEditStaff = (updatedMember: StaffMember) => {
-    setStaffList(prev => prev.map(s => s.id === updatedMember.id ? updatedMember : s));
+  const handleEditStaff = (updatedStaff: StaffMember) => {
+    setStaffList(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
   };
 
   const handleRefundSale = (refundTx: Transaction, updatedSale: Transaction) => {
-    setTransactions(prev => [refundTx, ...prev.map(t => t.id === updatedSale.id ? updatedSale : t)]);
+    setTransactions(prev => {
+      const filtered = prev.filter(t => t.id !== updatedSale.id);
+      return [refundTx, updatedSale, ...filtered];
+    });
+  };
+
+  const handleToggleTableStatus = (tableId: string) => {
+    setTables(prev => prev.map(t =>
+      t.id === tableId ? { ...t, status: t.status === 'Occupied' ? 'Available' : 'Occupied' } : t
+    ));
   };
 
   // Switch to customer QR menu directly for a chosen table
@@ -155,6 +178,9 @@ function AppContent() {
       transactions={transactions}
       onRefundSale={handleRefundSale}
       onSendOrderToKitchen={handleSendOrderToKitchen}
+      orders={orders}
+      onUpdateOrders={setOrders}
+      onOrderCreate={handleOrderCreate}
     />
   );
 }

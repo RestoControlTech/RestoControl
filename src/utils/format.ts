@@ -4,6 +4,13 @@
  */
 
 /**
+ * Single configurable exchange rate: 1 USD = 4,100 KHR
+ */
+export const USD_TO_KHR_RATE = 4100;
+
+export type PaymentCurrency = 'USD' | 'KHR';
+
+/**
  * Format a number as currency based on the currency code (USD or KHR)
  */
 export function formatPrice(price: number, currency: string = 'USD'): string {
@@ -13,7 +20,7 @@ export function formatPrice(price: number, currency: string = 'USD'): string {
     return isNegative ? `-${absVal} ៛` : `${absVal} ៛`;
   }
 
-  // Default USD
+  // Default USD ($XX.XX)
   if (price < 0) {
     return `-$${Math.abs(price).toFixed(2)}`;
   }
@@ -21,8 +28,21 @@ export function formatPrice(price: number, currency: string = 'USD'): string {
 }
 
 /**
- * Alias for formatPrice to format monetary values cleanly
+ * Format a number as Cambodian Riel currency (៛XX,XXX)
  */
-export function formatCurrency(amount: number, currency: string = 'USD'): string {
+export function formatKHR(amount: number): string {
+  if (amount < 0) {
+    return `-៛${Math.round(Math.abs(amount)).toLocaleString('en-US')}`;
+  }
+  return `៛${Math.round(amount).toLocaleString('en-US')}`;
+}
+
+/**
+ * Format an amount in the specified currency (USD or KHR)
+ */
+export function formatCurrency(amount: number, currency: PaymentCurrency | string = 'USD'): string {
+  if (currency === 'KHR') {
+    return formatKHR(amount);
+  }
   return formatPrice(amount, currency);
 }

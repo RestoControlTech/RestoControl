@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { MenuItem, Category, Table, StaffMember, Transaction } from '../types';
+import { MenuItem, Category, Table, StaffMember, Transaction, Order } from '../types';
 
 // Auth and Route Protection
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
@@ -21,6 +21,7 @@ import Sales from '../pages/dashboard/Sales';
 import Reports from '../pages/dashboard/Reports';
 import Settings from '../pages/dashboard/Settings';
 import Orders from '../pages/dashboard/Orders';
+import POS from '../pages/dashboard/POS';
 import QRMenu from '../pages/customer/QRMenu';
 
 export interface AppRoutesProps {
@@ -46,6 +47,9 @@ export interface AppRoutesProps {
   transactions: Transaction[];
   onRefundSale: (refundTx: Transaction, updatedSale: Transaction) => void;
   onSendOrderToKitchen: (itemsCount: number, total: number) => void;
+  orders?: Order[];
+  onUpdateOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
+  onOrderCreate?: (order: Order) => void;
 }
 
 export const AppRoutes: React.FC<AppRoutesProps> = ({
@@ -71,6 +75,9 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
   transactions,
   onRefundSale,
   onSendOrderToKitchen,
+  orders,
+  onUpdateOrders,
+  onOrderCreate,
 }) => {
   const navigate = useNavigate();
 
@@ -160,7 +167,11 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
               setSearchQuery={setSearchQuery}
               onSwitchToCustomerView={() => navigate('/customer')}
             >
-              <DashboardMain />
+              <POS
+                searchQuery={searchQuery}
+                orders={orders}
+                onOrderCreate={onOrderCreate}
+              />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -175,7 +186,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
               setSearchQuery={setSearchQuery}
               onSwitchToCustomerView={() => navigate('/customer')}
             >
-              <Orders />
+              <Orders
+                orders={orders}
+                onUpdateOrders={onUpdateOrders}
+              />
             </DashboardLayout>
           </ProtectedRoute>
         }
