@@ -11,9 +11,16 @@ export const USD_TO_KHR_RATE = 4100;
 export type PaymentCurrency = 'USD' | 'KHR';
 
 /**
- * Format a number as USD currency ($XX.XX)
+ * Format a number as currency based on the currency code (USD or KHR)
  */
-export function formatPrice(price: number): string {
+export function formatPrice(price: number, currency: string = 'USD'): string {
+  if (currency === 'KHR') {
+    const isNegative = price < 0;
+    const absVal = Math.round(Math.abs(price)).toLocaleString('en-US');
+    return isNegative ? `-${absVal} ៛` : `${absVal} ៛`;
+  }
+
+  // Default USD ($XX.XX)
   if (price < 0) {
     return `-$${Math.abs(price).toFixed(2)}`;
   }
@@ -25,17 +32,17 @@ export function formatPrice(price: number): string {
  */
 export function formatKHR(amount: number): string {
   if (amount < 0) {
-    return `-៛${Math.round(Math.abs(amount)).toLocaleString()}`;
+    return `-៛${Math.round(Math.abs(amount)).toLocaleString('en-US')}`;
   }
-  return `៛${Math.round(amount).toLocaleString()}`;
+  return `៛${Math.round(amount).toLocaleString('en-US')}`;
 }
 
 /**
  * Format an amount in the specified currency (USD or KHR)
  */
-export function formatCurrency(amount: number, currency: PaymentCurrency): string {
+export function formatCurrency(amount: number, currency: PaymentCurrency | string = 'USD'): string {
   if (currency === 'KHR') {
     return formatKHR(amount);
   }
-  return formatPrice(amount);
+  return formatPrice(amount, currency);
 }

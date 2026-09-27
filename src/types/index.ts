@@ -25,7 +25,6 @@ export interface MenuItem {
   id: string;
   category: string;
   name: string;
-  jpName?: string;
   description: string;
   price: number;
   image: string;
@@ -45,16 +44,16 @@ export interface Product {
   price: number;
   image: string;
   description: string;
-  available: boolean;
-  popular: boolean;
-  stock: number;
+  available?: boolean;
+  inStock?: boolean;
+  popular?: boolean;
+  stock?: number;
   badge?: string | null;
 }
 
 export interface Category {
   id: string;
   label: string;
-  icon: string;
 }
 
 export interface CartItem {
@@ -86,6 +85,46 @@ export interface StaffMember {
   status: 'Active' | 'Off Duty';
 }
 
+export type PaymentMethod =
+  | 'cash'
+  | 'card'
+  | 'qr'
+  | 'Cash'
+  | 'Credit Card'
+  | 'Debit Card'
+  | 'QR Code'
+  | 'Digital Wallet';
+
+export interface SaleItem {
+  id?: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal?: number;
+  cost?: number;
+  refundedQuantity?: number;
+}
+
+export interface RefundItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  originalItemId?: string;
+}
+
+export interface RefundRequestItem {
+  name: string;
+  quantity: number;
+  unitPrice?: number;
+}
+
+export interface RefundRequest {
+  items: RefundRequestItem[];
+  reason?: string;
+  customAmount?: number;
+}
+
 export interface Transaction {
   id: string;
   orderNumber: string;
@@ -93,8 +132,29 @@ export interface Transaction {
   table: string;
   type: 'Dine-in' | 'Takeaway';
   amount: number;
-  status: 'Receipt' | 'Refunded';
+  status: 'Receipt' | 'Completed' | 'Refunded';
+  paymentMethod?: PaymentMethod | string;
+  customerName?: string;
+  currency?: string;
+  items?: SaleItem[];
+  itemSummary?: string;
+  subtotal?: number;
+  tax?: number;
+  cashReceived?: number;
+  change?: number;
+  amountPaid?: number;
+  paymentStatus?: 'Paid' | 'Refunded' | 'Pending';
+  notes?: string;
+  originalTransactionId?: string;
+  originalOrderNumber?: string;
+  refundedAmount?: number;
+  refundReason?: string;
+  refundCount?: number;
+  refundSequence?: number;
+  refundIds?: string[];
 }
+
+export type Sale = Transaction;
 
 export type AppView = 'customer-qr' | 'dashboard';
 
@@ -151,7 +211,7 @@ export interface OrderDraft {
   total: number;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'qr';
+
 
 export type PaymentStatus = 'idle' | 'processing' | 'success' | 'failed';
 

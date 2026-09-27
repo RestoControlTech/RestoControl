@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
 import { QrCode, ExternalLink, Printer } from 'lucide-react';
 import { Table } from '../../types';
-import { Button, Card } from '../../components/ui';
+import { Button, Card, EmptyState } from '../../components/ui';
 
 interface TablesProps {
   tables: Table[];
@@ -35,8 +34,14 @@ export default function Tables({ tables, onToggleStatus, onViewMenu, searchQuery
         <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">Table layout status and active client QR ordering codes.</p>
       </div>
 
-      {/* Grid containing tables cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Grid containing tables cards or EmptyState */}
+      {filteredTables.length === 0 ? (
+        <EmptyState
+          title="No tables found"
+          description={searchQuery ? "No tables match your search query." : "No tables have been configured yet."}
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {filteredTables.map((table) => {
           const isOccupied = table.status === 'Occupied';
           return (
@@ -101,7 +106,8 @@ export default function Tables({ tables, onToggleStatus, onViewMenu, searchQuery
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
     </div>
   );

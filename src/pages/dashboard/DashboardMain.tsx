@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { TrendingUp, Users, ShoppingBag, Utensils, AlertCircle, Clock } from 'lucide-react';
+import { TrendingUp, Users, ShoppingBag, Utensils, Clock } from 'lucide-react';
 import { formatPrice } from '../../utils/format';
 import { Card } from '../../components/ui';
 
@@ -25,10 +24,9 @@ export default function DashboardMain() {
         <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sales Revenue</p>
-            <h3 className="text-lg font-black text-slate-800 tracking-tight">{formatPrice(3842.50)}</h3>
-            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              <span>+14.2% vs yesterday</span>
+            <h3 className="text-lg font-black text-slate-800 tracking-tight">{formatPrice(0)}</h3>
+            <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+              <span>No sales recorded yet</span>
             </span>
           </div>
           <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
@@ -40,8 +38,8 @@ export default function DashboardMain() {
         <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Orders</p>
-            <h3 className="text-lg font-black text-slate-800 tracking-tight">12 Active</h3>
-            <span className="text-[10px] text-slate-400 font-semibold">99.2% kitchen success rate</span>
+            <h3 className="text-lg font-black text-slate-800 tracking-tight">0 Active</h3>
+            <span className="text-[10px] text-slate-400 font-semibold">No open tickets</span>
           </div>
           <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
             <ShoppingBag className="w-5 h-5" />
@@ -52,8 +50,8 @@ export default function DashboardMain() {
         <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff On Duty</p>
-            <h3 className="text-lg font-black text-slate-800 tracking-tight">5 Members</h3>
-            <span className="text-[10px] text-emerald-600 font-bold">Registers active</span>
+            <h3 className="text-lg font-black text-slate-800 tracking-tight">0 Members</h3>
+            <span className="text-[10px] text-slate-400 font-semibold">No active shifts</span>
           </div>
           <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
             <Users className="w-5 h-5" />
@@ -64,10 +62,9 @@ export default function DashboardMain() {
         <Card padding="lg" className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Low Stock Items</p>
-            <h3 className="text-lg font-black text-slate-800 tracking-tight">1 Alert</h3>
-            <span className="text-[10px] text-amber-600 font-bold flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              <span>Mochi Ice Cream (3 left)</span>
+            <h3 className="text-lg font-black text-slate-800 tracking-tight">0 Alerts</h3>
+            <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
+              <span>All inventory normal</span>
             </span>
           </div>
           <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
@@ -90,37 +87,8 @@ export default function DashboardMain() {
             </span>
           </div>
 
-          <div className="divide-y divide-slate-50">
-            <div className="py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">New Order Sent from Table 04</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Tonkotsu Ramen, Yuzu Soda · $17.00</p>
-                </div>
-              </div>
-              <span className="text-[10px] text-slate-400 font-bold">2 mins ago</span>
-            </div>
-            <div className="py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Order #TX-9042 Paid Successfully</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Table 09 · $33.50 via Visa Card</p>
-                </div>
-              </div>
-              <span className="text-[10px] text-slate-400 font-bold">12 mins ago</span>
-            </div>
-            <div className="py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 bg-slate-300 rounded-full"></div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800">Staff Shift Started: Alex M.</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Assigned to Cashier terminal 01</p>
-                </div>
-              </div>
-              <span className="text-[10px] text-slate-400 font-bold">45 mins ago</span>
-            </div>
+          <div className="py-8 text-center text-xs text-slate-400 font-semibold">
+            No recent activity
           </div>
         </Card>
 
@@ -128,34 +96,8 @@ export default function DashboardMain() {
         <Card padding="lg" className="space-y-4">
           <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">Kitchen Queue Status</h4>
           
-          <div className="space-y-3.5">
-            <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
-                <span>Ramen Station</span>
-                <span>80% Speed</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-orange-500 h-full rounded-full" style={{ width: '80%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
-                <span>Sushi Station</span>
-                <span>95% Speed</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: '95%' }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
-                <span>Appetizers & Fryer</span>
-                <span>40% Busy</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-amber-500 h-full rounded-full" style={{ width: '40%' }}></div>
-              </div>
-            </div>
+          <div className="py-8 text-center text-xs text-slate-400 font-semibold">
+            No active kitchen tickets
           </div>
         </Card>
 

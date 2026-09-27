@@ -36,7 +36,7 @@ export default function Orders({
   initialOrders = MOCK_ORDERS,
   orders: externalOrders,
   onUpdateOrders,
-}: OrdersProps) {
+}: OrdersProps = {}) {
   const [localOrders, setLocalOrders] = useState<Order[]>(initialOrders);
 
   const orders = externalOrders || localOrders;
@@ -237,6 +237,7 @@ export default function Orders({
           )}
         </div>
       </div>
+
 
       {/* Search & Filters Toolbar */}
       <div className="bg-white border border-slate-100 p-4 rounded-3xl shadow-sm space-y-3">
@@ -565,6 +566,7 @@ export default function Orders({
         onSaveNote={handleSaveNote}
       />
 
+
       {/* Confirm Void Dialog */}
       <ConfirmDialog
         isOpen={Boolean(orderToVoid)}
@@ -578,4 +580,3 @@ export default function Orders({
     </div>
   );
 }
-
