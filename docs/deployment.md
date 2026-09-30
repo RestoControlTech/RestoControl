@@ -2,7 +2,10 @@
 
 ## 1. Overview
 
-RestoControl is designed as a modern, static Single Page Application (SPA). The compiled output consists entirely of optimized HTML, CSS, JavaScript, and static assets with zero server-side rendering (SSR) runtime dependencies. It can be hosted on any static hosting platform, content delivery network (CDN), or containerized web server.
+RestoControl is architected as a modern, static Single Page Application (SPA). The compiled output consists entirely of optimized HTML, CSS, JavaScript, and static assets with zero server-side rendering (SSR) runtime dependencies. It can be hosted on any static hosting platform, content delivery network (CDN), or containerized web server (e.g. Nginx, Apache, Cloudflare Pages, Vercel, Netlify).
+
+> [!NOTE]
+> This document specifies deployment readiness, configuration standards, and deployment procedures. Deployment has NOT yet been executed.
 
 ---
 
@@ -18,27 +21,27 @@ This compiles optimized assets into the `dist/` directory:
 
 | Asset | Typical Size | Gzip Size | Purpose |
 | :--- | :--- | :--- | :--- |
-| `dist/index.html` | ~0.9 kB | ~0.4 kB | Root HTML entry point |
-| `dist/assets/index-*.css` | ~54.7 kB | ~9.8 kB | Minified Tailwind CSS bundle |
-| `dist/assets/index-*.js` | ~451.3 kB | ~123.8 kB | Bundled application JavaScript (React + modules) |
+| `dist/index.html` | ~0.94 kB | ~0.43 kB | Root HTML entry point |
+| `dist/assets/index-*.css` | ~64.5 kB | ~11.3 kB | Minified Tailwind CSS bundle & print media rules |
+| `dist/assets/index-*.js` | ~552 kB | ~149.3 kB | Bundled application JavaScript (React 19 + modules) |
 
 ---
 
 ## 3. Local Production Preview
 
-To test and verify the compiled production bundle locally before deploying:
+To test and verify the compiled production bundle locally before deploying to remote infrastructure:
 
 ```bash
 npm run preview
 ```
 
-Vite will serve the contents of `dist/` at `http://localhost:4173/`.
+Vite will serve the contents of `dist/` at `http://localhost:4173/` (or the configured preview port).
 
 ---
 
 ## 4. SPA Routing & Fallback Configuration
 
-Because RestoControl uses client-side routing via React Router DOM (`createBrowserRouter` / `BrowserRouter`), all incoming HTTP requests to deep URLs (e.g. `/pos`, `/menu`, `/sales`, `/customer`) must be rewritten to serve `index.html`.
+Because RestoControl uses client-side routing via React Router DOM (`BrowserRouter`), all incoming HTTP requests to deep URLs (e.g. `/pos`, `/orders`, `/menu`, `/tables`, `/sales`, `/reports`, `/settings`, `/customer`, `/menu/:tableId`) must be rewritten to serve `index.html`.
 
 ### A. Nginx Configuration
 ```nginx
@@ -75,7 +78,7 @@ server {
   ```
   /*    /index.html   200
   ```
-- **Vercel**: Add `vercel.json` in the root:
+- **Vercel**: Add `vercel.json` in the project root:
   ```json
   {
     "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
@@ -84,10 +87,23 @@ server {
 
 ---
 
-## 5. Security & Production Checklist
+## 5. Environment Variables & Hosting Requirements
 
-Before going live:
-1. **Error Boundary**: Ensure a top-level React Error Boundary is implemented to catch and isolate unhandled runtime render exceptions.
-2. **Backend Authentication**: Replace the client-side mock authentication store (`src/auth/auth.store.ts`) with a secure backend API delivering JWTs via HttpOnly cookies.
-3. **HTTPS / TLS**: Always enforce HTTPS to ensure session integrity and prevent man-in-the-middle attacks on restaurant POS stations.
-4. **Content Security Policy (CSP)**: Configure appropriate CSP headers on the web server to restrict script execution and style origins.
+### Environment Variables
+- **Core Application**: **No environment variables are required** to run or build the frontend application.
+- **Optional Integrations**: An `.env.example` template is provided for optional extensions (e.g. `GEMINI_API_KEY`, `APP_URL`).
+
+### Hosting Requirements
+- Any static HTTP server capable of serving static files (HTML, JS, CSS, SVG, PNG).
+- HTTPS / TLS 1.3 certificate enabled to ensure secure POS terminal communications and camera permissions for table QR scanning.
+
+---
+
+## 6. Pre-Deployment Verification Checklist
+
+Before deploying the build to production:
+1. **Type Checking**: Verify `npm run lint` passes with 0 errors (`tsc --noEmit`).
+2. **Build Success**: Verify `npm run build` completes cleanly without broken asset references.
+3. **Automated Tests**: Verify all 21 test suites pass (`for f in $(find src -name "*.test.ts" | sort); do npx tsx "$f"; done`).
+4. **Clean Production Baseline**: Verify `src/App.tsx` initializes with empty lists (`menuItems: []`, `staffList: []`, `transactions: []`, `orders: []`) and 8 standard dining tables, keeping test fixtures strictly isolated in `src/data/mockData.ts`.
+5. **Print Media Isolation**: Verify 80mm thermal receipt printing uses clean `@media print` rules without printing sidebar navigation or controls.

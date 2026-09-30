@@ -3,67 +3,183 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
-import { Sparkles, Utensils, X } from 'lucide-react';
-import { Product, CartItem, OrderStatus, OrderDraft, PaymentConfirmation, Order } from '../../types';
-import { PRODUCTS } from '../../data/products';
-import { MOCK_ORDERS } from '../../data/orders';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Utensils, X } from 'lucide-react';
+import { Product, CartItem, OrderStatus, OrderDraft, PaymentConfirmation, Order, Table, Category } from '../../types';
 import { TABLES_DATA } from '../../data/mockData';
 import { Tabs, SearchBar, Button } from '../../components/ui';
 import { ProductGrid, TicketPanel, PaymentModal } from '../../components/pos';
 
 export interface POSProps {
   products?: Product[];
+  categories?: Category[];
+  tables?: Table[];
   searchQuery?: string;
   orders?: Order[];
   onSelectProduct?: (product: Product) => void;
   onOrderChange?: (draft: OrderDraft) => void;
   onPaymentComplete?: (confirmation: PaymentConfirmation) => void;
-  onOrderCreate?: (order: Order) => void;
+  onOrderCreate?: (order: Order, paymentInfo?: PaymentConfirmation) => void;
 }
 
 export default function POS({
-  products = PRODUCTS,
+  products = [],
+  categories = [],
+  tables = TABLES_DATA,
   searchQuery: externalSearch = '',
-  orders = MOCK_ORDERS,
+  orders = [],
   onSelectProduct,
   onOrderChange,
   onPaymentComplete,
   onOrderCreate,
 }: POSProps) {
+  const [searchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [localSearch, setLocalSearch] = useState<string>('');
   
   // Single Source of Truth for POS Ticket Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Table Information State (Table-only identification)
+  // Table Information State & Active Loaded Order Tracking
   const [selectedTableId, setSelectedTableId] = useState<string>('t1');
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [existingOrderNumber, setExistingOrderNumber] = useState<string | null>(null);
+  const [orderSource, setOrderSource] = useState<string>('POS');
+  const [orderPaymentStatus, setOrderPaymentStatus] = useState<string>('UNPAID');
   const [orderNote, setOrderNote] = useState<string>('');
   const [orderStatus, setOrderStatus] = useState<OrderStatus>('Draft');
 
   // Payment Modal State
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
 
-  // Compute next order number
+  // Helper to find an active unpaid order for a table
+  const findActiveOrderForTable = (tableId: string) => {
+    const tableObj = tables.find((t) => t.id === tableId);
+    return orders.find(
+      (o) =>
+        (o.tableId === tableId || (tableObj && o.table === tableObj.name)) &&
+        (o.paymentStatus === 'UNPAID' || o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Pending') &&
+        o.status !== 'Cancelled'
+    );
+  };
+
+  // Helper to load an existing order into POS cart and ticket
+  const loadOrder = (order: Order) => {
+    const loadedItems: CartItem[] = order.items.map((item) => {
+      const prod = products.find((p) => p.name === item.name || p.id === item.id);
+      return {
+        id: item.id,
+        productId: prod?.id || item.id,
+        name: item.name,
+        price: item.unitPrice,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        image: prod?.image || '',
+        lineTotal: item.lineTotal,
+      };
+    });
+    setCart(loadedItems);
+    setActiveOrderId(order.id);
+    setExistingOrderNumber(order.orderNumber);
+    setOrderSource(order.source || 'QR');
+    setOrderStatus(order.status);
+    setOrderPaymentStatus(order.paymentStatus);
+    setOrderNote(order.note || '');
+  };
+
+  const clearOrder = () => {
+    setCart([]);
+    setActiveOrderId(null);
+    setExistingOrderNumber(null);
+    setOrderSource('POS');
+    setOrderStatus('Draft');
+    setOrderPaymentStatus('UNPAID');
+    setOrderNote('');
+  };
+
+  // Handle table selection change
+  const handleTableChange = (newTableId: string) => {
+    setSelectedTableId(newTableId);
+    if (!newTableId) {
+      clearOrder();
+      return;
+    }
+    const activeOrder = findActiveOrderForTable(newTableId);
+    if (activeOrder) {
+      loadOrder(activeOrder);
+    } else {
+      clearOrder();
+    }
+  };
+
+  // Handle URL query parameters (e.g. /pos?orderId=ord-123 or /pos?table=Table%2001)
+  const urlOrderId = searchParams.get('orderId');
+  const urlTable = searchParams.get('table');
+  const urlTableId = searchParams.get('tableId');
+
+  useEffect(() => {
+    if (urlOrderId) {
+      const targetOrder = orders.find(
+        (o) => o.id === urlOrderId || o.orderNumber === urlOrderId
+      );
+      if (targetOrder) {
+        const tableObj = tables.find(
+          (t) => t.id === targetOrder.tableId || t.name === targetOrder.table
+        );
+        if (tableObj) {
+          setSelectedTableId(tableObj.id);
+        }
+        loadOrder(targetOrder);
+        return;
+      }
+    }
+    
+    if (urlTableId || urlTable) {
+      const tableObj = tables.find(
+        (t) => t.id === urlTableId || t.name === urlTable
+      );
+      if (tableObj) {
+        setSelectedTableId(tableObj.id);
+        const activeOrder = findActiveOrderForTable(tableObj.id);
+        if (activeOrder) {
+          loadOrder(activeOrder);
+        } else {
+          clearOrder();
+        }
+        return;
+      }
+    }
+
+    // Default mount check: If initial table has an active order, load it
+    if (selectedTableId) {
+      const activeOrder = findActiveOrderForTable(selectedTableId);
+      if (activeOrder) {
+        loadOrder(activeOrder);
+      }
+    }
+  }, [urlOrderId, urlTable, urlTableId, orders, tables]);
+
+  // Compute next order number for new orders
   const nextOrderNumber = useMemo(() => {
     const highestNum = orders.reduce((max, o) => {
-      const num = parseInt(o.orderNumber.replace('#', ''), 10);
+      const num = parseInt(o.orderNumber.replace(/[^0-9]/g, ''), 10);
       return !isNaN(num) && num > max ? num : max;
     }, 1026);
     return `#${highestNum + 1}`;
   }, [orders]);
 
-  // Derived OrderDraft object (Subtotal = Total, No Tax, No Service Charge)
+  // Derived OrderDraft object
   const orderDraft: OrderDraft = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.lineTotal, 0);
     const tax = 0;
     const serviceCharge = 0;
     const total = subtotal;
-    const table = TABLES_DATA.find((t) => t.id === selectedTableId);
+    const table = tables.find((t) => t.id === selectedTableId);
+    const finalOrderNum = existingOrderNumber || nextOrderNumber;
 
     return {
-      orderNumber: nextOrderNumber,
+      orderNumber: finalOrderNum,
       tableId: selectedTableId,
       tableName: table?.name || `Table ${selectedTableId}`,
       note: orderNote,
@@ -74,60 +190,58 @@ export default function POS({
       serviceCharge,
       total,
     };
-  }, [cart, selectedTableId, orderNote, orderStatus, nextOrderNumber]);
+  }, [cart, selectedTableId, orderNote, orderStatus, existingOrderNumber, nextOrderNumber, tables]);
 
   // Combine local search bar with global search query if provided
   const activeSearch = (localSearch || externalSearch).trim().toLowerCase();
 
-  // Category Tabs Configuration
+  // Category Tabs Configuration derived from Menu categories
   const categoryTabs = useMemo(() => {
+    if (categories && categories.length > 0) {
+      return [
+        { id: 'all', label: 'All Items', count: products.length },
+        ...categories
+          .filter((c) => c.id !== 'all')
+          .map((c) => ({
+            id: c.id,
+            label: c.label,
+            count: products.filter((p) => {
+              if (c.id === 'popular') {
+                return Boolean(p.popular || p.category?.toLowerCase() === 'popular' || p.badge?.toUpperCase() === 'POPULAR');
+              }
+              return (
+                p.category?.toLowerCase() === c.id.toLowerCase() ||
+                p.category?.toLowerCase() === c.label.toLowerCase()
+              );
+            }).length,
+          })),
+      ];
+    }
+    const uniqueCats = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
     return [
       { id: 'all', label: 'All Items', count: products.length },
-      {
-        id: 'popular',
-        label: 'Popular',
-        count: products.filter((p) => p.popular).length,
-      },
-      {
-        id: 'noodles',
-        label: 'Noodles',
-        count: products.filter((p) => p.category === 'Noodles').length,
-      },
-      {
-        id: 'mains-sushi',
-        label: 'Mains & Sushi',
-        count: products.filter((p) => p.category === 'Mains & Sushi').length,
-      },
-      {
-        id: 'appetizers',
-        label: 'Appetizers',
-        count: products.filter((p) => p.category === 'Appetizers').length,
-      },
-      {
-        id: 'drinks',
-        label: 'Drinks',
-        count: products.filter((p) => p.category === 'Drinks').length,
-      },
+      ...uniqueCats.map((cat) => ({
+        id: String(cat).toLowerCase(),
+        label: String(cat),
+        count: products.filter((p) => p.category === cat).length,
+      })),
     ];
-  }, [products]);
+  }, [categories, products]);
 
   // Derived Filtered Products
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       // 1. Category Filter Matching
       let matchesCategory = true;
-      if (selectedCategory === 'popular') {
-        matchesCategory = Boolean(product.popular);
-      } else if (selectedCategory === 'noodles') {
-        matchesCategory = product.category === 'Noodles';
-      } else if (selectedCategory === 'mains-sushi') {
-        matchesCategory = product.category === 'Mains & Sushi';
-      } else if (selectedCategory === 'appetizers') {
-        matchesCategory = product.category === 'Appetizers';
-      } else if (selectedCategory === 'drinks') {
-        matchesCategory = product.category === 'Drinks';
-      } else {
+      if (selectedCategory === 'all') {
         matchesCategory = true;
+      } else if (selectedCategory === 'popular') {
+        matchesCategory = Boolean(product.popular || product.category?.toLowerCase() === 'popular' || product.badge?.toUpperCase() === 'POPULAR');
+      } else {
+        const catObj = categories.find((c) => c.id === selectedCategory);
+        matchesCategory =
+          product.category?.toLowerCase() === selectedCategory.toLowerCase() ||
+          Boolean(catObj && product.category?.toLowerCase() === catObj.label.toLowerCase());
       }
 
       // 2. Search Filter Matching (Name, Category, Description, Japanese Name)
@@ -137,18 +251,18 @@ export default function POS({
 
       const matchesSearch =
         product.name.toLowerCase().includes(activeSearch) ||
-        product.category.toLowerCase().includes(activeSearch) ||
-        product.description.toLowerCase().includes(activeSearch) ||
-        (product.jpName && product.jpName.toLowerCase().includes(activeSearch));
+        (product.category && product.category.toLowerCase().includes(activeSearch)) ||
+        (product.description && product.description.toLowerCase().includes(activeSearch)) ||
+        Boolean(product.jpName && product.jpName.toLowerCase().includes(activeSearch));
 
       // 3. Combined Filter: Both must match
       return matchesCategory && matchesSearch;
     });
-  }, [products, selectedCategory, activeSearch]);
+  }, [products, selectedCategory, activeSearch, categories]);
 
   // Cart Management Handlers
   const handleAddToCart = (product: Product) => {
-    if (!product.available || product.stock === 0) {
+    if (product.available === false || product.inStock === false || product.stock === 0) {
       return;
     }
 
@@ -252,10 +366,6 @@ export default function POS({
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
                 POS Order Terminal
               </h2>
-              <span className="bg-orange-50 text-orange-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-orange-200/50 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                <span>LIVE CATALOG</span>
-              </span>
             </div>
             <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">
               Browse products, filter by category, and search dishes for customer orders.
@@ -362,11 +472,15 @@ export default function POS({
       <div className="lg:col-span-4 sticky top-24">
         <TicketPanel
           cart={cart}
-          tables={TABLES_DATA}
+          tables={tables}
           selectedTableId={selectedTableId}
           orderNote={orderNote}
           orderStatus={orderStatus}
-          onTableChange={setSelectedTableId}
+          orderNumber={existingOrderNumber || undefined}
+          orderSource={orderSource}
+          isExistingOrder={Boolean(activeOrderId)}
+          paymentStatus={orderPaymentStatus}
+          onTableChange={handleTableChange}
           onOrderNoteChange={setOrderNote}
           onIncreaseQuantity={handleIncreaseQuantity}
           onDecreaseQuantity={handleDecreaseQuantity}
@@ -383,9 +497,10 @@ export default function POS({
         orderDraft={orderDraft}
         onPaymentSuccess={(confirmation) => {
           const finalOrderNum =
-            confirmation.orderNumber && !confirmation.orderNumber.startsWith('#TEMP')
+            existingOrderNumber ||
+            (confirmation.orderNumber && !confirmation.orderNumber.startsWith('#TEMP')
               ? confirmation.orderNumber
-              : nextOrderNumber;
+              : nextOrderNumber);
 
           // Align confirmation order reference
           confirmation.orderNumber = finalOrderNum;
@@ -394,9 +509,11 @@ export default function POS({
           const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
           const newOrder: Order = {
-            id: `ord-${Date.now()}`,
+            id: activeOrderId || `ord-${Date.now()}`,
             orderNumber: finalOrderNum,
             table: orderDraft.tableName || 'Table 01',
+            tableId: selectedTableId,
+            source: orderSource || 'POS',
             customer: orderDraft.customerName || orderDraft.tableName || 'Walk-in Customer',
             orderType: orderDraft.orderType || 'Dine In',
             items: orderDraft.items.map((item) => ({
@@ -407,19 +524,17 @@ export default function POS({
               lineTotal: item.lineTotal,
             })),
             total: orderDraft.total,
-            paymentStatus: 'Paid',
-            status: orderDraft.status === 'Draft' ? 'Preparing' : orderDraft.status,
+            paymentStatus: 'PAID',
+            status: orderStatus === 'Draft' ? 'READY' : orderStatus,
             dateTime: `Today, ${timeStr}`,
             note: orderDraft.note || undefined,
           };
 
-          onOrderCreate?.(newOrder);
+          onOrderCreate?.(newOrder, confirmation);
           onPaymentComplete?.(confirmation);
         }}
         onResetOrder={() => {
-          setCart([]);
-          setOrderNote('');
-          setOrderStatus('Draft');
+          clearOrder();
         }}
       />
     </div>

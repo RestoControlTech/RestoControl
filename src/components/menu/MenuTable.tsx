@@ -18,6 +18,7 @@ import {
 } from '../ui';
 import { PermissionGate } from '../auth/PermissionGate';
 import { AvailabilityToggle } from './AvailabilityToggle';
+import { getOptimizedCloudinaryUrl, DEFAULT_PRODUCT_IMAGE } from '../../services/cloudinary';
 
 export interface MenuTableProps {
   items: MenuItem[];
@@ -56,11 +57,15 @@ export const MenuTable: React.FC<MenuTableProps> = ({
             <TableCell>
               <div className="flex items-center gap-3">
                 <img
-                  src={item.image}
+                  src={getOptimizedCloudinaryUrl(item.image, { width: 90, height: 90, crop: 'fill' }) || DEFAULT_PRODUCT_IMAGE}
                   alt={item.name}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_IMAGE;
+                  }}
                   className={`w-9 h-9 rounded-xl object-cover shrink-0 border border-slate-100 ${
                     item.inStock ? '' : 'opacity-40 grayscale'
                   }`}
+                  loading="lazy"
                 />
                 <div>
                   <h4 className="font-extrabold text-slate-800 text-xs">{item.name}</h4>

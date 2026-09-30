@@ -10,6 +10,7 @@ import { formatPrice } from '../../utils/format';
 import { Card, Badge } from '../ui';
 import { PermissionGate } from '../auth/PermissionGate';
 import { AvailabilityToggle } from './AvailabilityToggle';
+import { getOptimizedCloudinaryUrl, DEFAULT_PRODUCT_IMAGE } from '../../services/cloudinary';
 
 export interface MenuCardProps {
   item: MenuItem;
@@ -26,16 +27,22 @@ export const MenuCard: React.FC<MenuCardProps> = ({
   onToggleStock,
   isToggling = false,
 }) => {
+  const displayImage = getOptimizedCloudinaryUrl(item.image, { width: 240, height: 240, crop: 'fill' }) || DEFAULT_PRODUCT_IMAGE;
+
   return (
     <Card padding="sm" hoverEffect className="flex gap-3.5 bg-white border border-slate-100 rounded-2xl">
       {/* Left Image Box */}
       <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-50 shrink-0 border border-slate-100">
         <img
-          src={item.image}
+          src={displayImage}
           alt={item.name}
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_IMAGE;
+          }}
           className={`w-full h-full object-cover transition-transform duration-300 ${
             item.inStock ? 'group-hover:scale-105' : 'opacity-40 grayscale'
           }`}
+          loading="lazy"
         />
         <span className="absolute bottom-1 right-1 bg-stone-900/80 text-white font-extrabold text-[8px] px-1 py-0.5 rounded shadow-xs">
           #{item.id.replace('food-', 'D')}

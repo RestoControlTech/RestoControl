@@ -89,7 +89,7 @@ The refund engine enforces 10 strict business rules defined in [`src/utils/refun
   - [`src/hooks/usePartialRefund.ts`](file:///Users/mac/Documents/RestoControl/RestoControl/src/hooks/usePartialRefund.ts)
   - [`src/hooks/useFullRefund.ts`](file:///Users/mac/Documents/RestoControl/RestoControl/src/hooks/useFullRefund.ts)
 - **UI Modals**:
-  - [`src/components/sales/RefundModal.tsx`](file:///Users/mac/Documents/RestoControl/RestoControl/src/components/sales/RefundModal.tsx)
+  - [`src/components/sales/PartialRefundModal.tsx`](file:///Users/mac/Documents/RestoControl/RestoControl/src/components/sales/PartialRefundModal.tsx)
   - [`src/components/sales/FullRefundModal.tsx`](file:///Users/mac/Documents/RestoControl/RestoControl/src/components/sales/FullRefundModal.tsx)
   - [`src/components/sales/SaleDetailModal.tsx`](file:///Users/mac/Documents/RestoControl/RestoControl/src/components/sales/SaleDetailModal.tsx)
 

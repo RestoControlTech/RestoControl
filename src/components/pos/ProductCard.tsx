@@ -8,6 +8,7 @@ import { Plus } from 'lucide-react';
 import { Product } from '../../types';
 import { formatPrice } from '../../utils/format';
 import { Card, Badge, Button } from '../ui';
+import { getOptimizedCloudinaryUrl, DEFAULT_PRODUCT_IMAGE } from '../../services/cloudinary';
 
 export interface ProductCardProps {
   product: Product;
@@ -34,6 +35,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
+  const displayImage = getOptimizedCloudinaryUrl(product.image, { width: 340, height: 255, crop: 'fill' }) || DEFAULT_PRODUCT_IMAGE;
+
   return (
     <Card
       padding="sm"
@@ -47,8 +50,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Product Image Box with Badge Overlays */}
         <div className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-50 mb-2.5">
           <img
-            src={product.image}
+            src={displayImage}
             alt={product.name}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_PRODUCT_IMAGE;
+            }}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />

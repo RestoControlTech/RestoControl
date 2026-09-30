@@ -4,17 +4,12 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Download } from 'lucide-react';
 import { Transaction } from '../../types';
 import { filterSales } from '../../utils/salesFilters';
-import { calculateSalesSummary } from '../../utils/salesSummary';
-import { Button } from '../../components/ui';
-import { PermissionGate } from '../../components/auth/PermissionGate';
 import {
   SaleDetailModal,
   SaleReceiptModal,
   SalesFilters,
-  SalesSummary,
   PartialRefundModal,
   FullRefundModal,
   SalesTable,
@@ -94,7 +89,6 @@ export default function Sales({
 
   // Multi-attribute filter states
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const dateFilters = [
@@ -118,7 +112,6 @@ export default function Sales({
     return filterSales(completedSales, {
       searchQuery: localSearch || externalSearch,
       paymentMethod: paymentFilter,
-      orderType: orderTypeFilter,
       status: statusFilter,
       dateRangePreset: activeDateTab,
       customStart: customStartDate,
@@ -132,14 +125,8 @@ export default function Sales({
     externalSearch,
     localSearch,
     paymentFilter,
-    orderTypeFilter,
     statusFilter,
   ]);
-
-  // Dynamic KPI analytics calculations derived directly from the filtered sales dataset
-  const salesSummary = useMemo(() => {
-    return calculateSalesSummary(filteredSales);
-  }, [filteredSales]);
 
   const hasActiveFilters = Boolean(
     localSearch ||
@@ -148,7 +135,6 @@ export default function Sales({
     customStartDate ||
     customEndDate ||
     paymentFilter !== 'all' ||
-    orderTypeFilter !== 'all' ||
     statusFilter !== 'all'
   );
 
@@ -158,34 +144,18 @@ export default function Sales({
     setCustomStartDate('');
     setCustomEndDate('');
     setPaymentFilter('all');
-    setOrderTypeFilter('all');
     setStatusFilter('all');
   };
 
   return (
     <div id="sales-screen-root" className="space-y-6 pb-12">
-      {/* Title & export actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">Sales History</h2>
-          <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">
-            Historical transactions, payment summaries, and daily receipts.
-          </p>
-        </div>
-        <PermissionGate permission="sales.view">
-          <Button
-            onClick={() => alert('Compiling CSV logs. Downloading Sales Summary Report...')}
-            icon={<Download className="w-4 h-4" />}
-            variant="primary"
-            size="md"
-          >
-            Export CSV
-          </Button>
-        </PermissionGate>
+      {/* Title */}
+      <div>
+        <h2 className="text-xl font-black text-slate-900 tracking-tight">Sale History</h2>
+        <p className="text-xs text-slate-400 font-semibold tracking-wide mt-0.5">
+          Historical completed sales, payment details, and receipts.
+        </p>
       </div>
-
-      {/* KPI Stats Analytics Panels */}
-      <SalesSummary summary={salesSummary} isFiltered={hasActiveFilters} />
 
       {/* Sales Filtering & Search Component */}
       <SalesFilters
@@ -200,8 +170,6 @@ export default function Sales({
         onSearchChange={setLocalSearch}
         paymentFilter={paymentFilter}
         onPaymentFilterChange={setPaymentFilter}
-        orderTypeFilter={orderTypeFilter}
-        onOrderTypeFilterChange={setOrderTypeFilter}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
         hasActiveFilters={hasActiveFilters}
@@ -216,6 +184,7 @@ export default function Sales({
         hasActiveFilters={hasActiveFilters}
         onSelectSale={(sale) => setSelectedTx(sale)}
         onViewReceipt={(sale) => setReceiptToView(sale)}
+        onOpenRefund={(sale) => openFullRefundModal(sale)}
       />
 
       {/* Sale Detail View Modal */}

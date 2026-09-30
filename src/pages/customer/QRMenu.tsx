@@ -15,53 +15,65 @@ import {
   ErrorState,
 } from '../../components/ui';
 import { CartDrawer, QRProductCard } from '../../components/customer';
+import { useSettings } from '../../hooks/useSettings';
+import { useTranslation } from '../../i18n';
 
-interface QRMenuProps {
-  initialMenuItems: MenuItem[];
-  categories: Category[];
+export interface QROrderSubmission {
   tableName: string;
-  onSendOrderToKitchen: (itemsCount: number, total: number) => void;
+  tableId?: string;
+  items: CartItem[];
+  total: number;
+  count: number;
 }
 
-export default function QRMenu({ initialMenuItems, categories, tableName, onSendOrderToKitchen }: QRMenuProps) {
+export interface QRMenuProps {
+  initialMenuItems?: MenuItem[];
+  categories?: Category[];
+  tableName: string;
+  tableId?: string;
+  onSendOrderToKitchen: (orderOrCount: QROrderSubmission | number, total?: number) => void;
+}
+
+export default function QRMenu({
+  initialMenuItems = [],
+  categories = [],
+  tableName,
+  tableId,
+  onSendOrderToKitchen,
+}: QRMenuProps) {
+  const { settings } = useSettings();
+  const { t } = useTranslation();
   const [currentCategory, setCurrentCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [uiState, setUiState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
-  const [cart, setCart] = useState<Record<string, CartItem>>({
-    'food-2': {
-      id: 'food-2',
-      productId: 'food-2',
-      name: 'Spicy Salmon Roll',
-      image: 'https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=400&auto=format&fit=crop&q=80',
-      price: 8.50,
-      unitPrice: 8.50,
-      quantity: 1,
-      lineTotal: 8.50,
-    },
-    'food-7': {
-      id: 'food-7',
-      productId: 'food-7',
-      name: 'Pork Gyoza 5pc',
-      image: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400&auto=format&fit=crop&q=80',
-      price: 6.50,
-      unitPrice: 6.50,
-      quantity: 1,
-      lineTotal: 6.50,
-    },
-    'food-10': {
-      id: 'food-10',
-      productId: 'food-10',
-      name: 'Yuzu Soda',
-      image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400&auto=format&fit=crop&q=80',
-      price: 3.50,
-      unitPrice: 3.50,
-      quantity: 1,
-      lineTotal: 3.50,
-    }
-  });
+  const [cart, setCart] = useState<Record<string, CartItem>>({});
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Merge categories from props with any categories present in initialMenuItems
+  const displayCategories = useMemo(() => {
+    const map = new Map<string, Category>();
+    map.set('all', { id: 'all', label: 'All Items' });
+
+    (categories || []).forEach((c) => {
+      if (c && c.id) {
+        map.set(c.id.toLowerCase(), { id: c.id, label: c.label });
+      }
+    });
+
+    (initialMenuItems || []).forEach((item) => {
+      if (item && item.category) {
+        const catKey = item.category.toLowerCase();
+        if (!map.has(catKey)) {
+          const label = item.category.charAt(0).toUpperCase() + item.category.slice(1);
+          map.set(catKey, { id: item.category, label });
+        }
+      }
+    });
+
+    return Array.from(map.values());
+  }, [categories, initialMenuItems]);
 
   // Derived Values
   const cartCount = useMemo(() => {
@@ -80,6 +92,11 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
   // Cart quantity actions
   const addToCart = (item: MenuItem) => {
+    if (item.inStock === false) {
+      triggerToast(`${item.name} is currently unavailable`);
+      return;
+    }
+
     setCart(prev => {
       const next = { ...prev };
       const existingItem = next[item.id];
@@ -129,12 +146,25 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
   const clearSearch = () => {
     setSearchQuery('');
+    setCurrentCategory('all');
     setUiState('normal');
   };
 
   const handleKitchenSubmit = () => {
+    const cartItems = Object.values(cart);
+    if (cartItems.length === 0 || cartCount === 0) {
+      triggerToast('Your order is empty');
+      return;
+    }
+
     setIsCartOpen(false);
-    onSendOrderToKitchen(cartCount, cartTotal);
+    onSendOrderToKitchen({
+      tableName,
+      tableId,
+      items: cartItems,
+      total: cartTotal,
+      count: cartCount,
+    }, cartTotal);
     setCart({}); // clear cart
     triggerToast('Order sent to kitchen!');
   };
@@ -143,22 +173,25 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
   const filteredItems = useMemo(() => {
     if (uiState !== 'normal') return [];
 
-    let list = initialMenuItems;
+    let list = initialMenuItems || [];
 
     if (currentCategory !== 'all') {
-      list = list.filter(item => item.category === currentCategory);
+      const targetCat = currentCategory.toLowerCase();
+      list = list.filter(item => (item.category || '').toLowerCase() === targetCat);
     }
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(item =>
-        item.name.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q)
+        (item.name || '').toLowerCase().includes(q) ||
+        (item.description || '').toLowerCase().includes(q)
       );
     }
 
     return list;
   }, [initialMenuItems, currentCategory, searchQuery, uiState]);
+
+  const isMenuCompletelyEmpty = (initialMenuItems || []).length === 0;
 
   return (
     <div id="customer-view-container" className="bg-stone-100 min-h-screen flex justify-center selection:bg-orange-100 selection:text-orange-900 font-sans antialiased">
@@ -172,12 +205,25 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
           <div className="px-4 pt-3.5 pb-2 flex items-center justify-between">
             {/* Restaurant Profile details */}
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                K
-              </div>
+              {settings.logoUrl ? (
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.restaurantName || 'Restaurant'}
+                  className="w-9 h-9 rounded-xl object-cover border border-stone-200 shadow-sm"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                  {settings.restaurantName ? settings.restaurantName.charAt(0).toUpperCase() : 'K'}
+                </div>
+              )}
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="font-bold text-stone-900 leading-tight text-xs">Hengheng pub</h1>
+                  <h1 className="font-bold text-stone-900 leading-tight text-xs">
+                    {settings.restaurantName || 'Kuro Bistro'}
+                  </h1>
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
                 </div>
                 <p className="text-[10px] text-stone-500 font-medium">Japanese & Fusion Kitchen</p>
@@ -186,7 +232,7 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
             {/* Table designation tag badge */}
             <div className="bg-stone-100 border border-stone-200/80 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-              <span className="text-[10px] font-bold text-stone-700 tracking-tight">Table <span className="text-orange-600 font-extrabold">{tableName.replace('Table ', '')}</span></span>
+              <span className="text-[10px] font-bold text-stone-700 tracking-tight">Table <span className="text-orange-600 font-extrabold">{tableName.replace(/^Table\s*/i, '')}</span></span>
             </div>
           </div>
 
@@ -206,8 +252,8 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
 
           {/* Scrolling Categories selector rail */}
           <nav className="flex items-center gap-1.5 px-3.5 pb-2 overflow-x-auto no-scrollbar scroll-smooth border-t border-stone-50">
-            {categories.map(cat => {
-              const isActive = currentCategory === cat.id;
+            {displayCategories.map(cat => {
+              const isActive = currentCategory.toLowerCase() === cat.id.toLowerCase();
               return (
                 <button
                   key={cat.id}
@@ -257,10 +303,12 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
         <main className="flex-1 px-3.5 pt-3 pb-28 overflow-y-auto">
 
           {/* Header row stats count */}
-          {uiState === 'normal' && (
+          {uiState === 'normal' && !isMenuCompletelyEmpty && (
             <div className="flex items-center justify-between mb-2.5 px-0.5">
               <h2 className="text-xs font-black text-stone-900 tracking-tight">
-                {searchQuery ? `Results for "${searchQuery}"` : categories.find(c => c.id === currentCategory)?.label || 'All Dishes'}
+                {searchQuery
+                  ? `Results for "${searchQuery}"`
+                  : displayCategories.find(c => c.id.toLowerCase() === currentCategory.toLowerCase())?.label || 'All Dishes'}
               </h2>
               <span className="text-[10px] text-stone-500 font-bold">{filteredItems.length} item{filteredItems.length === 1 ? '' : 's'}</span>
             </div>
@@ -286,14 +334,26 @@ export default function QRMenu({ initialMenuItems, categories, tableName, onSend
             <LoadingState count={4} type="grid" />
           )}
 
-          {/* 3. EMPTY STATE: Search empty results */}
-          {(uiState === 'empty' || (uiState === 'normal' && filteredItems.length === 0)) && (
-            <EmptyState
-              title="No items found"
-              description="We couldn't find anything matching your search. Try another query."
-              actionText="Clear Search"
-              onAction={clearSearch}
-            />
+          {/* 3A. EMPTY PRODUCTION MENU STATE: When restaurant currently has no items in the menu */}
+          {uiState === 'normal' && isMenuCompletelyEmpty && (
+            <div id="qr-menu-empty-state">
+              <EmptyState
+                title="Menu is currently empty"
+                description="No menu items are currently available for this table. Please check back soon or consult staff."
+              />
+            </div>
+          )}
+
+          {/* 3B. EMPTY SEARCH/FILTER RESULTS: When items exist in menu, but current search or category has 0 matches */}
+          {(uiState === 'empty' || (uiState === 'normal' && !isMenuCompletelyEmpty && filteredItems.length === 0)) && (
+            <div id="qr-search-empty-state">
+              <EmptyState
+                title="No items found"
+                description="We couldn't find anything matching your search. Try another query."
+                actionText="Clear Search"
+                onAction={clearSearch}
+              />
+            </div>
           )}
 
           {/* 4. ERROR STATE: Server connectivity error banner */}

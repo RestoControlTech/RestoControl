@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ArrowRight, Eye, CreditCard, Banknote, QrCode, Smartphone, Printer } from 'lucide-react';
+import { ArrowRight, Eye, CreditCard, Banknote, QrCode, Smartphone, Printer, RotateCcw } from 'lucide-react';
 import { Transaction } from '../../types';
 import { formatPrice } from '../../utils/format';
 import {
@@ -24,6 +24,7 @@ export interface SalesTableProps {
   hasActiveFilters: boolean;
   onSelectSale: (sale: Transaction) => void;
   onViewReceipt: (sale: Transaction) => void;
+  onOpenRefund?: (sale: Transaction) => void;
 }
 
 export const SalesTable: React.FC<SalesTableProps> = ({
@@ -32,6 +33,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   hasActiveFilters,
   onSelectSale,
   onViewReceipt,
+  onOpenRefund,
 }) => {
   const getPaymentMethodIcon = (method?: string) => {
     switch (method) {
@@ -65,13 +67,11 @@ export const SalesTable: React.FC<SalesTableProps> = ({
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeaderCell>Sale / Order #</TableHeaderCell>
-              <TableHeaderCell>Date & Time</TableHeaderCell>
-              <TableHeaderCell>Type & Table</TableHeaderCell>
-              <TableHeaderCell>Customer</TableHeaderCell>
-              <TableHeaderCell>Items Summary</TableHeaderCell>
-              <TableHeaderCell>Payment Method</TableHeaderCell>
+              <TableHeaderCell>Date</TableHeaderCell>
+              <TableHeaderCell>Sale ID</TableHeaderCell>
+              <TableHeaderCell>Items</TableHeaderCell>
               <TableHeaderCell>Total</TableHeaderCell>
+              <TableHeaderCell>Payment</TableHeaderCell>
               <TableHeaderCell>Status</TableHeaderCell>
               <TableHeaderCell className="text-right">Actions</TableHeaderCell>
             </TableRow>
@@ -86,41 +86,33 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                   onClick={() => onSelectSale(sale)}
                   className="cursor-pointer hover:bg-slate-50/80 transition-colors"
                 >
-                  {/* 1. Sale / Order Number */}
+                  {/* 1. Date */}
+                  <TableCell className="text-slate-600 font-bold text-xs whitespace-nowrap">
+                    {sale.dateTime}
+                  </TableCell>
+
+                  {/* 2. Sale ID */}
                   <TableCell>
                     <div className="font-extrabold text-slate-800 text-xs">{sale.orderNumber}</div>
                     <div className="text-[10px] text-slate-400 font-semibold leading-none mt-0.5">
                       #{sale.id.replace('tx-', 'TX-')}
+                      {sale.table ? ` • ${sale.table}` : ''}
+                      {sale.customerName ? ` • ${sale.customerName}` : ''}
                     </div>
                   </TableCell>
 
-                  {/* 2. Date & Time */}
-                  <TableCell className="text-slate-500 font-bold text-xs whitespace-nowrap">
-                    {sale.dateTime}
+                  {/* 3. Items */}
+                  <TableCell className="text-xs text-slate-600 max-w-[14rem] truncate font-medium">
+                    {sale.itemSummary || (sale.items && sale.items.length > 0 ? `${sale.items.length} item(s)` : 'Order items')}
                   </TableCell>
 
-                  {/* 3. Order Type & Table */}
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                      <div>
-                        <span className="font-extrabold text-slate-800 text-xs">{sale.table || 'Pickup'}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold ml-1.5">({sale.type})</span>
-                      </div>
-                    </div>
+                  {/* 4. Total */}
+                  <TableCell className={`font-black text-xs whitespace-nowrap ${isRefund ? 'text-red-500' : 'text-slate-900'}`}>
+                    {formatPrice(sale.amount, sale.currency || 'USD')}
+                    <span className="text-[9px] font-bold text-slate-400 ml-1">{sale.currency || 'USD'}</span>
                   </TableCell>
 
-                  {/* 4. Customer Name */}
-                  <TableCell className="text-xs font-bold text-slate-700">
-                    {sale.customerName || 'Walk-in Guest'}
-                  </TableCell>
-
-                  {/* 5. Items Summary */}
-                  <TableCell className="text-xs text-slate-600 max-w-[13rem] truncate font-medium">
-                    {sale.itemSummary || (sale.items ? `${sale.items.length} item(s)` : 'Order items')}
-                  </TableCell>
-
-                  {/* 6. Payment Method */}
+                  {/* 5. Payment */}
                   <TableCell>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                       {getPaymentMethodIcon(sale.paymentMethod)}
@@ -128,20 +120,14 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                     </div>
                   </TableCell>
 
-                  {/* 7. Total Amount & Currency */}
-                  <TableCell className={`font-black text-xs whitespace-nowrap ${isRefund ? 'text-red-500' : 'text-slate-900'}`}>
-                    {formatPrice(sale.amount, sale.currency || 'USD')}
-                    <span className="text-[9px] font-bold text-slate-400 ml-1">{sale.currency || 'USD'}</span>
-                  </TableCell>
-
-                  {/* 8. Status */}
+                  {/* 6. Status */}
                   <TableCell>
                     <Badge variant={isRefund ? 'red' : 'emerald'} size="xs" className="font-extrabold text-[9px]">
                       {isRefund ? 'Refunded' : 'Completed'}
                     </Badge>
                   </TableCell>
 
-                  {/* 9. Action Buttons */}
+                  {/* 7. Actions */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -167,6 +153,20 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                       >
                         <Printer className="w-3.5 h-3.5" />
                       </button>
+
+                      {onOpenRefund && !isRefund && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenRefund(sale);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Refund"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

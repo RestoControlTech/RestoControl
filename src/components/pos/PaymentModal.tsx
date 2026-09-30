@@ -14,6 +14,7 @@ import {
   RotateCcw,
   Receipt,
   DollarSign,
+  Printer,
 } from 'lucide-react';
 import { OrderDraft, PaymentMethod, PaymentStatus, PaymentCurrency, PaymentConfirmation } from '../../types';
 import { formatPrice, formatKHR, formatCurrency, USD_TO_KHR_RATE } from '../../utils/format';
@@ -150,60 +151,126 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           </div>
 
           {/* Receipt Summary Card */}
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2.5 text-xs">
-            <div className="flex justify-between font-bold text-slate-500">
-              <span>Order Reference</span>
-              <span className="font-extrabold text-slate-900">{confirmation.orderNumber}</span>
-            </div>
-            {orderDraft.tableName && (
-              <div className="flex justify-between font-bold text-slate-500">
-                <span>Table Number</span>
-                <span className="font-extrabold text-slate-800">{orderDraft.tableName}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-bold text-slate-500">
-              <span>Payment Method</span>
-              <span className="font-extrabold text-slate-800 uppercase">{confirmation.method}</span>
-            </div>
-            <div className="flex justify-between font-bold text-slate-500">
-              <span>Currency</span>
-              <span className="font-extrabold text-slate-800">{confirmation.currency === 'KHR' ? 'KHR (៛)' : 'USD ($)'}</span>
+          <div
+            id="printable-receipt"
+            className="bg-slate-50 border border-slate-100 rounded-2xl p-5 space-y-3 font-mono text-xs select-text"
+          >
+            {/* Branding Header */}
+            <div className="text-center border-b border-dashed border-slate-300 pb-2 space-y-0.5">
+              <h3 className="font-sans font-black text-sm text-slate-900 tracking-tight uppercase">
+                RestoControl POS
+              </h3>
+              <p className="text-[10px] text-slate-500 font-sans">
+                Station Payment Receipt
+              </p>
             </div>
 
-            {confirmation.currency === 'KHR' && (
-              <div className="flex justify-between font-bold text-slate-400 text-[11px]">
-                <span>Exchange Rate</span>
-                <span>1 USD = {USD_TO_KHR_RATE.toLocaleString()} KHR</span>
+            {/* Metadata */}
+            <div className="space-y-1 text-[11px] border-b border-dashed border-slate-300 pb-2.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Order Ref:</span>
+                <span className="font-extrabold text-slate-900">{confirmation.orderNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Date/Time:</span>
+                <span>{confirmation.timestamp}</span>
+              </div>
+              {orderDraft.tableName && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Table:</span>
+                  <span className="font-extrabold text-slate-800">{orderDraft.tableName}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment Method:</span>
+                <span className="font-extrabold text-slate-800 uppercase">{confirmation.method}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Currency:</span>
+                <span className="font-extrabold text-slate-800">{confirmation.currency === 'KHR' ? 'KHR (៛)' : 'USD ($)'}</span>
+              </div>
+
+              {confirmation.currency === 'KHR' && (
+                <div className="flex justify-between text-slate-400 text-[10px]">
+                  <span>Exchange Rate:</span>
+                  <span>1 USD = {USD_TO_KHR_RATE.toLocaleString()} KHR</span>
+                </div>
+              )}
+            </div>
+
+            {/* Itemized list if present */}
+            {orderDraft.items && orderDraft.items.length > 0 && (
+              <div className="space-y-1.5 border-b border-dashed border-slate-300 pb-2.5">
+                <div className="grid grid-cols-12 font-bold text-[10px] uppercase text-slate-400 pb-1 border-b border-slate-100">
+                  <div className="col-span-5">Item</div>
+                  <div className="col-span-2 text-center">Qty</div>
+                  <div className="col-span-2 text-right">Price</div>
+                  <div className="col-span-3 text-right">Total</div>
+                </div>
+                {orderDraft.items.map((item, idx) => (
+                  <div key={item.id || idx} className="grid grid-cols-12 text-[11px] leading-tight">
+                    <div className="col-span-5 font-bold truncate pr-1 text-slate-900">{item.name}</div>
+                    <div className="col-span-2 text-center font-bold text-slate-600">x{item.quantity}</div>
+                    <div className="col-span-2 text-right text-slate-500">{formatPrice(item.unitPrice)}</div>
+                    <div className="col-span-3 text-right font-bold text-slate-900">{formatPrice(item.lineTotal)}</div>
+                  </div>
+                ))}
               </div>
             )}
 
-            {confirmation.method === 'cash' && (
-              <>
-                <div className="border-t border-slate-200/80 pt-2 flex justify-between font-bold text-slate-600">
-                  <span>Amount Received</span>
-                  <span className="font-black text-slate-900">
-                    {formatCurrency(confirmation.cashReceived || 0, confirmation.currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between font-bold text-emerald-700">
-                  <span>Change Returned</span>
-                  <span className="font-black text-emerald-600 text-sm">
-                    {formatCurrency(confirmation.change || 0, confirmation.currency)}
-                  </span>
-                </div>
-              </>
-            )}
+            {/* Financial Details */}
+            <div className="space-y-1 text-[11px]">
+              <div className="flex justify-between font-bold text-slate-600">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(confirmation.currencyAmount, confirmation.currency)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-200">
+                <span>TOTAL:</span>
+                <span>{formatCurrency(confirmation.currencyAmount, confirmation.currency)}</span>
+              </div>
+
+              {confirmation.method === 'cash' && (
+                <>
+                  <div className="border-t border-dashed border-slate-200 pt-1.5 flex justify-between font-bold text-slate-600">
+                    <span>Amount Received:</span>
+                    <span className="font-black text-slate-900">
+                      {formatCurrency(confirmation.cashReceived || 0, confirmation.currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-bold text-emerald-700">
+                    <span>Change Returned:</span>
+                    <span className="font-black text-emerald-600 text-sm">
+                      {formatCurrency(confirmation.change || 0, confirmation.currency)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="text-center text-[10px] text-slate-400 font-sans border-t border-dashed border-slate-300 pt-2">
+              <p>Thank you for your visit!</p>
+              <p className="mt-0.5">Please retain this receipt for your records.</p>
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          {/* Action Buttons - Hidden during print */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 no-print">
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => window.print()}
+              icon={<Printer className="w-4 h-4" />}
+            >
+              Print Receipt
+            </Button>
             <Button
               variant="primary"
               size="md"
               onClick={handleNewOrder}
               iconRight={<RotateCcw className="w-4 h-4" />}
             >
-              Start New Order
+              New Order
             </Button>
             <Button
               variant="secondary"

@@ -162,14 +162,13 @@ export const TABLES_DATA: Table[] = [
 ];
 
 export const STAFF_DATA: StaffMember[] = [
-  { id: 's1', name: 'Kenji Sato', email: 'kenji.s@kurobistro.com', role: 'Manager', station: 'Register 01', status: 'Active' },
-  { id: 's2', name: 'Alex M.', email: 'alex.m@kurobistro.com', role: 'Cashier', station: 'Register 01', status: 'Active' },
-  { id: 's3', name: 'Yumi Tanaka', email: 'yumi.t@kurobistro.com', role: 'Kitchen', station: 'Kitchen Display', status: 'Active' },
-  { id: 's4', name: 'Daiki Takahashi', email: 'daiki.t@kurobistro.com', role: 'Waiter', station: 'Handheld 02', status: 'Active' },
-  { id: 's5', name: 'Ren Ishikawa', email: 'ren.i@kurobistro.com', role: 'Kitchen', station: 'Kitchen Display', status: 'Active' },
-  { id: 's6', name: 'Hana Mori', email: 'hana.m@kurobistro.com', role: 'Waiter', station: 'Unassigned', status: 'Off Duty' },
-  { id: 's7', name: 'Sora Watanabe', email: 'sora.w@kurobistro.com', role: 'Cashier', station: 'Unassigned', status: 'Off Duty' },
-  { id: 's8', name: 'Emi Kobayashi', email: 'emi.k@kurobistro.com', role: 'Manager', station: 'Unassigned', status: 'Off Duty' }
+  { id: 's-admin-01', name: 'Pan Bunheng', email: 'panbunhen58@gmail.com', role: 'Manager', station: 'Main Office', status: 'Active' },
+  { id: 's-admin-02', name: 'Buma', email: 'Buma168@gmail.com', role: 'Manager', station: 'Register 01', status: 'Active' },
+  { id: 's-admin-03', name: 'Lymeng', email: 'Lymeng111@gmail.com', role: 'Manager', station: 'Main Office', status: 'Active' },
+  { id: 's-staff-01', name: 'Panhrith', email: 'Panhrith233@gmail.com', role: 'Waiter', station: 'Handheld 01', status: 'Active' },
+  { id: 's-staff-02', name: 'Dalyna', email: 'Dalyna188@gmail.com', role: 'Cashier', station: 'Register 02', status: 'Active' },
+  { id: 's-staff-03', name: 'Romrom', email: 'romromloveyou@gmail.com', role: 'Waiter', station: 'Handheld 02', status: 'Active' },
+
 ];
 
 export const TRANSACTIONS_DATA: Transaction[] = [

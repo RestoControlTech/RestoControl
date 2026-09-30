@@ -19,8 +19,8 @@ export interface SalesFiltersProps {
   onSearchChange: (query: string) => void;
   paymentFilter: string;
   onPaymentFilterChange: (payment: string) => void;
-  orderTypeFilter: string;
-  onOrderTypeFilterChange: (type: string) => void;
+  orderTypeFilter?: string;
+  onOrderTypeFilterChange?: (type: string) => void;
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
   hasActiveFilters: boolean;
@@ -40,8 +40,6 @@ export const SalesFilters: React.FC<SalesFiltersProps> = ({
   onSearchChange,
   paymentFilter,
   onPaymentFilterChange,
-  orderTypeFilter,
-  onOrderTypeFilterChange,
   statusFilter,
   onStatusFilterChange,
   hasActiveFilters,
@@ -66,7 +64,7 @@ export const SalesFilters: React.FC<SalesFiltersProps> = ({
           <SearchBar
             value={searchQuery}
             onChange={onSearchChange}
-            placeholder="Search order #, customer, table, item..."
+            placeholder="Search sale, order ID, customer, table..."
             size="sm"
             className="bg-white"
           />
@@ -124,20 +122,6 @@ export const SalesFilters: React.FC<SalesFiltersProps> = ({
                 { value: 'Cash', label: 'Cash' },
                 { value: 'QR Code', label: 'QR Code' },
                 { value: 'Digital Wallet', label: 'Digital Wallet' },
-              ]}
-              className="py-1.5 text-xs bg-slate-50 border-slate-200"
-            />
-          </div>
-
-          {/* Order Type Filter */}
-          <div className="w-36">
-            <Select
-              value={orderTypeFilter}
-              onChange={(e) => onOrderTypeFilterChange(e.target.value)}
-              options={[
-                { value: 'all', label: 'All Order Types' },
-                { value: 'Dine-in', label: 'Dine-in' },
-                { value: 'Takeaway', label: 'Takeaway' },
               ]}
               className="py-1.5 text-xs bg-slate-50 border-slate-200"
             />
@@ -222,19 +206,6 @@ export const SalesFilters: React.FC<SalesFiltersProps> = ({
                 onClick={() => onPaymentFilterChange('all')}
                 className="hover:text-emerald-950 p-0.5 rounded-full hover:bg-emerald-200/50 cursor-pointer"
                 title="Clear payment filter"
-              >
-                <X className="w-2.5 h-2.5" />
-              </button>
-            </Badge>
-          )}
-          {orderTypeFilter !== 'all' && (
-            <Badge variant="blue" size="xs" className="inline-flex items-center gap-1">
-              <span>Type: {orderTypeFilter}</span>
-              <button
-                type="button"
-                onClick={() => onOrderTypeFilterChange('all')}
-                className="hover:text-blue-950 p-0.5 rounded-full hover:bg-blue-200/50 cursor-pointer"
-                title="Clear order type filter"
               >
                 <X className="w-2.5 h-2.5" />
               </button>

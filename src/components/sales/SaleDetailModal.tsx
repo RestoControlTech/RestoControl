@@ -8,7 +8,6 @@ import {
   Receipt,
   Calendar,
   User,
-  Utensils,
   CheckCircle2,
   AlertTriangle,
   MapPin,
@@ -102,24 +101,14 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
         </div>
 
         {/* 2. Order Metadata Information Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white border border-slate-100 rounded-2xl p-3.5 text-xs">
-          <div>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
-              Order Type
-            </span>
-            <span className="font-extrabold text-slate-800 flex items-center gap-1">
-              <Utensils className="w-3.5 h-3.5 text-orange-500" />
-              {sale.type}
-            </span>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white border border-slate-100 rounded-2xl p-3.5 text-xs">
           <div>
             <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
               Table / Location
             </span>
             <span className="font-extrabold text-slate-800 flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              {sale.table || 'Pickup'}
+              {sale.table || 'Dine-in'}
             </span>
           </div>
 

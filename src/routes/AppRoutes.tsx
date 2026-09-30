@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { MenuItem, Category, Table, StaffMember, Transaction, Order } from '../types';
+import { MenuItem, Category, Table, StaffMember, Transaction, Order, Product } from '../types';
 
 // Auth and Route Protection
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
@@ -13,16 +13,15 @@ import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 // Layout and Pages imports
 import DashboardLayout from '../layouts/DashboardLayout';
 import Login from '../pages/dashboard/Login';
-import DashboardMain from '../pages/dashboard/DashboardMain';
 import Tables from '../pages/dashboard/Tables';
 import Menu from '../pages/dashboard/Menu';
 import Staff from '../pages/dashboard/Staff';
 import Sales from '../pages/dashboard/Sales';
-import Reports from '../pages/dashboard/Reports';
 import Settings from '../pages/dashboard/Settings';
 import Orders from '../pages/dashboard/Orders';
 import POS from '../pages/dashboard/POS';
 import QRMenu from '../pages/customer/QRMenu';
+import { TableMenuRoute } from '../pages/customer/TableMenuRoute';
 
 export interface AppRoutesProps {
   searchQuery: string;
@@ -30,6 +29,7 @@ export interface AppRoutesProps {
   tables: Table[];
   activeTableQRName: string;
   onToggleTableStatus: (tableId: string) => void;
+  onAddTable?: (table: { name: string; section: string; seats: number }) => { success: boolean; error?: string; table?: Table };
   onViewMenuFromPOS: (tableName: string) => void;
   menuItems: MenuItem[];
   categories: Category[];
@@ -46,7 +46,7 @@ export interface AppRoutesProps {
   onEditStaff: (member: StaffMember) => void;
   transactions: Transaction[];
   onRefundSale: (refundTx: Transaction, updatedSale: Transaction) => void;
-  onSendOrderToKitchen: (itemsCount: number, total: number) => void;
+  onSendOrderToKitchen: (orderOrCount: import('../pages/customer/QRMenu').QROrderSubmission | number, total?: number) => void;
   orders?: Order[];
   onUpdateOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
   onOrderCreate?: (order: Order) => void;
@@ -58,6 +58,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
   tables,
   activeTableQRName,
   onToggleTableStatus,
+  onAddTable,
   onViewMenuFromPOS,
   menuItems,
   categories,
@@ -81,6 +82,24 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  // Synchronize POS products directly with Menu catalog items
+  const posProducts = useMemo<Product[]>(() => {
+    return menuItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      price: item.price,
+      image: item.image,
+      imagePublicId: item.imagePublicId,
+      description: item.description,
+      available: item.inStock,
+      inStock: item.inStock,
+      stock: item.inStock ? 99 : 0,
+      popular: item.category?.toLowerCase() === 'popular' || item.badge?.toUpperCase() === 'POPULAR',
+      badge: item.badge,
+    }));
+  }, [menuItems]);
+
   return (
     <Routes>
       {/* Public Route: Login */}
@@ -93,7 +112,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
           <div id="client-app-root" className="relative">
             <div
               className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/pos')}
             >
               <span>← Back to POS Station</span>
             </div>
@@ -110,53 +129,18 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
       <Route
         path="/menu/:tableId"
         element={
-          <div id="client-app-root" className="relative">
-            <div
-              className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
-              onClick={() => navigate('/dashboard')}
-            >
-              <span>← Back to POS Station</span>
-            </div>
-            <QRMenu
-              initialMenuItems={menuItems}
-              categories={categories}
-              tableName={activeTableQRName}
-              onSendOrderToKitchen={onSendOrderToKitchen}
-            />
-          </div>
+          <TableMenuRoute
+            tables={tables}
+            menuItems={menuItems}
+            categories={categories}
+            onSendOrderToKitchen={onSendOrderToKitchen}
+          />
         }
       />
 
-      {/* Protected Routes (Require Authentication & Permission Authorization) */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute permission="dashboard.view">
-            <DashboardLayout
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSwitchToCustomerView={() => navigate('/customer')}
-            >
-              <DashboardMain />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute permission="dashboard.view">
-            <DashboardLayout
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSwitchToCustomerView={() => navigate('/customer')}
-            >
-              <DashboardMain />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+      {/* Root & Legacy Redirects */}
+      <Route path="/" element={<Navigate to="/pos" replace />} />
+      <Route path="/dashboard" element={<Navigate to="/pos" replace />} />
 
       <Route
         path="/pos"
@@ -168,7 +152,10 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
               onSwitchToCustomerView={() => navigate('/customer')}
             >
               <POS
+                products={posProducts}
+                categories={categories}
                 searchQuery={searchQuery}
+                tables={tables}
                 orders={orders}
                 onOrderCreate={onOrderCreate}
               />
@@ -187,6 +174,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
               onSwitchToCustomerView={() => navigate('/customer')}
             >
               <Orders
+                tables={tables}
                 orders={orders}
                 onUpdateOrders={onUpdateOrders}
               />
@@ -207,6 +195,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
               <Tables
                 tables={tables}
                 onToggleStatus={onToggleTableStatus}
+                onAddTable={onAddTable}
                 onViewMenu={onViewMenuFromPOS}
                 searchQuery={searchQuery}
               />
@@ -281,20 +270,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
         }
       />
 
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute permission="reports.view">
-            <DashboardLayout
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSwitchToCustomerView={() => navigate('/customer')}
-            >
-              <Reports />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/reports" element={<Navigate to="/sales" replace />} />
 
       <Route
         path="/settings"
@@ -312,7 +288,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
       />
 
       {/* Catch-all fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/pos" replace />} />
     </Routes>
   );
 };

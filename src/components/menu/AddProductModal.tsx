@@ -31,8 +31,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [stock, setStock] = useState('10');
   const [inStock, setInStock] = useState(true);
   const [isPopular, setIsPopular] = useState(false);
-  const [image, setImage] = useState(DEFAULT_PRODUCT_IMAGE);
+  const [image, setImage] = useState('');
+  const [imagePublicId, setImagePublicId] = useState<string | undefined>(undefined);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const [formErrors, setFormErrors] = useState<{
     name?: string;
@@ -57,8 +59,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     setStock('10');
     setInStock(true);
     setIsPopular(false);
-    setImage(DEFAULT_PRODUCT_IMAGE);
+    setImage('');
+    setImagePublicId(undefined);
     setImageError(null);
+    setIsUploadingImage(false);
     setFormErrors({});
   };
 
@@ -110,6 +114,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       description: description.trim(),
       price: parseFloat(price),
       image: image.trim() || DEFAULT_PRODUCT_IMAGE,
+      imagePublicId,
       badge: badge.trim() || (isPopular ? 'POPULAR' : null),
       tag: isPopular ? 'Popular' : undefined,
       inStock: finalInStock,
@@ -182,9 +187,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
           <ImagePicker
             image={image}
-            onChange={setImage}
+            imagePublicId={imagePublicId}
+            onChange={(url, publicId) => {
+              setImage(url);
+              setImagePublicId(publicId);
+            }}
             error={imageError}
             onErrorChange={setImageError}
+            onUploadingChange={setIsUploadingImage}
           />
         </div>
 
@@ -235,8 +245,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <Button type="button" variant="secondary" size="md" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" size="md">
-            Add Product
+          <Button 
+            type="submit" 
+            variant="primary" 
+            size="md"
+            disabled={isUploadingImage}
+          >
+            {isUploadingImage ? 'Uploading Image...' : 'Add Product'}
           </Button>
         </div>
       </form>

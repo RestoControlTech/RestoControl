@@ -1,1 +1,69 @@
 @import "tailwindcss";
+
+/* Global Print Stylesheet for Thermal Receipts and Table QR Cards */
+@media print {
+  /* Hide all elements on the page by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Make only the active printable element and its children visible */
+  #printable-table-qr-card,
+  #printable-table-qr-card *,
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible !important;
+  }
+
+  /* 1. Printable Table QR Card styling (centered card format) */
+  #printable-table-qr-card {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 340px !important;
+    max-width: 90vw !important;
+    margin: 0 !important;
+    padding: 32px !important;
+    box-shadow: none !important;
+    border: 3px solid #000000 !important;
+    border-radius: 20px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* 2. Printable Thermal Receipt styling (80mm standard POS width) */
+  #printable-receipt {
+    position: fixed !important;
+    left: 50% !important;
+    top: 0 !important;
+    transform: translateX(-50%) !important;
+    width: 80mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 16px 12px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace, sans-serif !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Hide interactive controls, buttons, sidebars, headers */
+  .no-print,
+  button,
+  nav,
+  aside,
+  header {
+    display: none !important;
+  }
+}

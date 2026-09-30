@@ -28,6 +28,7 @@ export interface MenuItem {
   description: string;
   price: number;
   image: string;
+  imagePublicId?: string;
   badge: string | null;
   tag?: string | null;
   inStock: boolean;
@@ -43,6 +44,7 @@ export interface Product {
   category: ProductCategory | string;
   price: number;
   image: string;
+  imagePublicId?: string;
   description: string;
   available?: boolean;
   inStock?: boolean;
@@ -67,12 +69,14 @@ export interface CartItem {
   lineTotal: number;
 }
 
+export type TableStatus = 'Available' | 'Occupied' | 'Reserved';
+
 export interface Table {
   id: string;
   name: string;
   section: string;
   seats: number;
-  status: 'Occupied' | 'Available';
+  status: TableStatus;
   qrCodeUrl: string;
 }
 
@@ -158,13 +162,30 @@ export type Sale = Transaction;
 
 export type AppView = 'customer-qr' | 'dashboard';
 
-export type DashboardTab = 'dashboard' | 'pos' | 'orders' | 'menu' | 'tables' | 'sales' | 'staff' | 'reports' | 'settings';
+export type DashboardTab = 'pos' | 'orders' | 'sales' | 'menu' | 'tables' | 'staff' | 'customers' | 'settings' | 'dashboard' | 'reports';
 
 export type OrderType = 'Dine In' | 'Takeaway' | 'Delivery';
 
-export type OrderStatus = 'Draft' | 'Pending' | 'Preparing' | 'Cooking' | 'Ready' | 'Served' | 'Completed' | 'Cancelled';
+export type OrderStatus =
+  | 'NEW'
+  | 'PREPARING'
+  | 'READY'
+  | 'Draft'
+  | 'Pending'
+  | 'Preparing'
+  | 'Cooking'
+  | 'Ready'
+  | 'Served'
+  | 'Completed'
+  | 'Cancelled';
 
-export type PaymentStatusType = 'Paid' | 'Pending' | 'Unpaid' | 'Refunded';
+export type PaymentStatusType =
+  | 'UNPAID'
+  | 'PAID'
+  | 'Paid'
+  | 'Pending'
+  | 'Unpaid'
+  | 'Refunded';
 
 export interface OrderItem {
   id: string;
@@ -184,6 +205,8 @@ export interface Order {
   id: string;
   orderNumber: string;
   table: string;
+  tableId?: string;
+  source?: 'QR' | 'POS' | string;
   customer: string;
   orderType: OrderType;
   items: OrderItem[];

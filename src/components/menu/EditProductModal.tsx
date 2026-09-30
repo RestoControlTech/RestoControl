@@ -34,7 +34,9 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
   const [inStock, setInStock] = useState(true);
   const [isPopular, setIsPopular] = useState(false);
   const [image, setImage] = useState(DEFAULT_PRODUCT_IMAGE);
+  const [imagePublicId, setImagePublicId] = useState<string | undefined>(undefined);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const [formErrors, setFormErrors] = useState<{
     name?: string;
@@ -54,7 +56,9 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
       setInStock(item.inStock);
       setIsPopular(Boolean(item.badge === 'POPULAR' || item.tag === 'Popular' || item.category === 'popular'));
       setImage(item.image);
+      setImagePublicId(item.imagePublicId);
       setImageError(null);
+      setIsUploadingImage(false);
       setFormErrors({});
     }
   }, [item]);
@@ -115,6 +119,7 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
       description: description.trim(),
       price: parseFloat(price),
       image: image.trim() || DEFAULT_PRODUCT_IMAGE,
+      imagePublicId,
       badge: badge.trim() || (isPopular ? 'POPULAR' : null),
       tag: isPopular ? 'Popular' : undefined,
       inStock: finalInStock,
@@ -192,9 +197,14 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
 
           <ImagePicker
             image={image}
-            onChange={setImage}
+            imagePublicId={imagePublicId}
+            onChange={(url, publicId) => {
+              setImage(url);
+              setImagePublicId(publicId);
+            }}
             error={imageError}
             onErrorChange={setImageError}
+            onUploadingChange={setIsUploadingImage}
           />
         </div>
 
@@ -245,8 +255,13 @@ export const EditProductModal: React.FC<EditProductModalProps> = ({
           <Button type="button" variant="secondary" size="md" onClick={handleClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" size="md">
-            Save Changes
+          <Button 
+            type="submit" 
+            variant="primary" 
+            size="md"
+            disabled={isUploadingImage}
+          >
+            {isUploadingImage ? 'Uploading Image...' : 'Save Changes'}
           </Button>
         </div>
       </form>

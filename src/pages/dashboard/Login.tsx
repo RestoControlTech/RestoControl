@@ -18,8 +18,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const location = useLocation();
   const { login, isAuthenticated } = useAuth();
 
-  const [email, setEmail] = useState('admin@restaurant.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   // If already authenticated, redirect to dashboard or requested page
   useEffect(() => {
     if (isAuthenticated) {
-      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
+      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/pos';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
@@ -51,22 +51,11 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       if (onLoginSuccess) {
         onLoginSuccess({ name: email, role: 'admin' });
       }
-      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
+      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/pos';
       navigate(from, { replace: true });
     } else {
-      setError(result.error || 'Invalid credentials. Try admin@restaurant.com (admin123) or staff@restaurant.com (staff123)');
+      setError(result.error || 'Invalid email or password. Please try again.');
     }
-  };
-
-  const insertDigit = (digit: string) => {
-    setError(null);
-    if (password.length < 12) {
-      setPassword(prev => prev + digit);
-    }
-  };
-
-  const deleteDigit = () => {
-    setPassword(prev => prev.slice(0, -1));
   };
 
   return (
@@ -84,55 +73,17 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">RESTOCONTROL TERMINAL</p>
         </div>
 
-        {/* System Terminal status indicator banner */}
-        <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-center mb-6">
-          <div className="flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-100 py-1.5 px-3.5 rounded-xl text-slate-500">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>TERMINAL: POS-01</span>
-          </div>
-          <div className="flex items-center justify-center gap-1.5 bg-emerald-50/60 border border-emerald-100/40 py-1.5 px-3.5 rounded-xl text-emerald-700">
-            <span>TOUCH READY</span>
-          </div>
-        </div>
-
-        {/* Quick Credentials Helper Pills for Easy Demo / Touch */}
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('admin@restaurant.com');
-              setPassword('admin123');
-              setError(null);
-            }}
-            className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200/50 transition-colors cursor-pointer"
-          >
-            Fill Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('staff@restaurant.com');
-              setPassword('staff123');
-              setError(null);
-            }}
-            className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/50 transition-colors cursor-pointer"
-          >
-            Fill Staff
-          </button>
-        </div>
-
         {/* Credentials Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Email / Username field */}
           <Input
             label="Email or Staff ID"
-            sublabel="MOCK AUTH"
             id="username"
             type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@restaurant.com or staff@restaurant.com"
+            placeholder="e.g. staff@kurobistro.com"
             icon={<User className="w-4 h-4" />}
             required
           />
@@ -140,7 +91,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           {/* Password / PIN code field */}
           <Input
             label="Password"
-            sublabel="DEMO: admin123 / staff123"
             id="password"
             type={showPassword ? 'text' : 'password'}
             value={password}
@@ -171,7 +121,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               />
               <span>Remember this station</span>
             </label>
-            <a href="#forgot" onClick={(e) => { e.preventDefault(); setError('Demo Credentials: admin@restaurant.com (admin123) or staff@restaurant.com (staff123)'); }} className="text-orange-600 hover:text-orange-700">Forgot password?</a>
+            <a href="#forgot" onClick={(e) => { e.preventDefault(); setError('Please contact your administrator to reset your password.'); }} className="text-orange-600 hover:text-orange-700">Forgot password?</a>
           </div>
 
           {/* Error Prompt block */}
@@ -181,40 +131,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </div>
           )}
 
-          {/* Numeric keypad interface directly inside login card for touch POS screens */}
-          <div id="touch-keypad" className="grid grid-cols-3 gap-1.5 pt-3 border-t border-stone-100/70">
-            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(num => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => insertDigit(num)}
-                className="h-10 bg-stone-50 hover:bg-stone-100 border border-stone-200/40 text-sm font-black text-stone-700 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center shadow-xs cursor-pointer"
-              >
-                {num}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={deleteDigit}
-              className="h-10 bg-stone-100/50 hover:bg-stone-100 border border-stone-200/40 text-xs font-black text-stone-500 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center cursor-pointer"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={() => insertDigit('0')}
-              className="h-10 bg-stone-50 hover:bg-stone-100 border border-stone-200/40 text-sm font-black text-stone-700 rounded-xl transition-all active:scale-[0.93] flex items-center justify-center shadow-xs cursor-pointer"
-            >
-              0
-            </button>
-            <button
-              type="submit"
-              className="h-10 bg-orange-100 text-orange-700 hover:bg-orange-200 font-black text-xs rounded-xl transition-all active:scale-[0.93] flex items-center justify-center cursor-pointer"
-            >
-              Submit
-            </button>
-          </div>
-
           {/* Sign In Primary CTA Button */}
           <Button
             type="submit"
@@ -223,7 +139,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             size="lg"
             fullWidth
             isLoading={isLoading}
-            className="mt-2"
+            className="mt-4"
           >
             <span>Sign In to Station</span>
             <span className="text-sm font-normal">→</span>
@@ -231,21 +147,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
         </form>
 
-        {/* Info Disclaimer Footer block */}
-        <div className="mt-6 p-3 bg-stone-50 border border-stone-100 rounded-2xl text-[10px] text-stone-400 font-semibold leading-relaxed text-center">
-          Role assignments and shift permissions are authenticated through RestoControl mock session store.
-        </div>
-
       </div>
 
       {/* Gateway Telemetry and stats sub-label footer */}
       <footer className="mt-5 flex flex-col items-center gap-1 text-[10px] text-stone-400 font-bold uppercase tracking-wider text-center">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Frontend Mock Auth Active</span>
-          <span className="text-stone-300">•</span>
-          <span>v2.4 Production</span>
-        </div>
         <div className="text-stone-300 font-medium tracking-normal capitalize mt-0.5">
           © 2026 Kuro Bistro Hospitality Group
         </div>

@@ -46,16 +46,20 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   // Badge Variant Mappings for Order Status
   const getOrderStatusBadgeVariant = (status: OrderStatus | string): BadgeVariant => {
     switch (status) {
+      case 'NEW':
       case 'Pending':
+      case 'Draft':
         return 'amber';
+      case 'PREPARING':
       case 'Preparing':
-        return 'blue';
       case 'Cooking':
-        return 'amber';
+        return 'blue';
+      case 'READY':
       case 'Ready':
         return 'emerald';
       case 'Served':
       case 'Completed':
+      case 'COMPLETED':
         return 'slate';
       case 'Cancelled':
         return 'rose';
@@ -306,25 +310,16 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 Submit Order
               </Button>
             )}
-            {onUpdateStatus && order.status === 'Pending' && (
+            {onUpdateStatus && (order.status === 'Pending' || order.status === 'NEW') && (
               <Button
                 onClick={() => onUpdateStatus(order.id, 'Preparing')}
                 variant="subtle-orange"
                 size="sm"
               >
-                Accept Order
+                Start Preparing
               </Button>
             )}
-            {onUpdateStatus && order.status === 'Preparing' && (
-              <Button
-                onClick={() => onUpdateStatus(order.id, 'Cooking')}
-                variant="warning"
-                size="sm"
-              >
-                Start Cooking
-              </Button>
-            )}
-            {onUpdateStatus && order.status === 'Cooking' && (
+            {onUpdateStatus && (order.status === 'Preparing' || order.status === 'PREPARING' || order.status === 'Cooking') && (
               <Button
                 onClick={() => onUpdateStatus(order.id, 'Ready')}
                 variant="success"
@@ -333,22 +328,13 @@ export const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 Mark Ready
               </Button>
             )}
-            {onUpdateStatus && order.status === 'Ready' && (
-              <Button
-                onClick={() => onUpdateStatus(order.id, 'Served')}
-                variant="secondary"
-                size="sm"
-              >
-                Deliver Order
-              </Button>
-            )}
-            {onUpdateStatus && order.status === 'Served' && (
+            {onUpdateStatus && (order.status === 'Ready' || order.status === 'READY' || order.status === 'Served') && (
               <Button
                 onClick={() => onUpdateStatus(order.id, 'Completed')}
                 variant="secondary"
                 size="sm"
               >
-                Finish Order
+                Complete Order
               </Button>
             )}
 

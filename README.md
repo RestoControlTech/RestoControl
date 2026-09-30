@@ -1,15 +1,51 @@
 # RestoControl
 
-A modern, high-performance Restaurant Management & Point-of-Sale (POS) application built with React 19, TypeScript, and Tailwind CSS. RestoControl provides end-to-end operational capabilities for restaurant staff, managers, and dining guests—featuring multi-role access control, live order processing, dual-currency sales auditing, and strict multi-rule refund workflows.
+A modern, high-performance Restaurant Management & Point-of-Sale (POS) application built with React 19, TypeScript, and Tailwind CSS. RestoControl provides end-to-end operational capabilities for restaurant staff, managers, and dining guests—featuring role-based access control (RBAC), live order processing, dual-currency sales auditing, mobile customer QR table ordering, and audit-compliant multi-rule refund workflows.
 
 ---
 
 ## Overview
 
-RestoControl is designed to streamline front-of-house, kitchen, and back-office restaurant operations:
+RestoControl streamlines front-of-house, kitchen, and back-office restaurant operations:
 - **Floor Staff & Cashiers** can manage table states, take orders via touch POS terminals, and send order tickets to the kitchen.
-- **Guests** can scan table QR codes to access a responsive, mobile-first digital menu, customize cart items, and dispatch kitchen orders directly from their mobile devices.
-- **Managers & Administrators** have complete oversight with role-based access control, real-time KPI telemetry, product/catalog management, staff shift rosters, financial sales ledgers, and audit-compliant refund management.
+- **Dining Guests** can scan unique table QR codes to access a responsive, mobile-first digital menu, customize cart items, and dispatch kitchen orders directly from their phones.
+- **Managers & Administrators** have complete oversight with role-based access control, real-time KPI telemetry, product/catalog management, staff shift rosters, financial sales ledgers, 80mm thermal receipts, and audit-compliant refund management.
+
+---
+
+## Core Restaurant Workflows
+
+### 1. POS Terminal Workflow
+```
+Product Selection → Cart Management → Table Assignment → Order Formulation → Payment (USD/KHR/Change) → Completed Sale → Sales Ledger → Thermal Receipt
+```
+1. Staff browse products by category tab or search, adding dishes to the cart. Unavailable products are disabled.
+2. Cart calculates line totals, supports quantity steppers and removals, and guards against empty cart submissions.
+3. Staff assign the ticket to a table (e.g. Table 01 to Table 08).
+4. Staff select payment tender (Cash, Card, QR, Digital Wallet). For cash, staff input received amounts in USD or KHR; the system calculates exact change.
+5. On payment completion, the order is marked `Paid`, the table is marked `Occupied`, and a finalized transaction record is added to the sales ledger.
+6. A thermal 80mm receipt is rendered with dedicated browser print media styling.
+
+### 2. Customer QR Table Ordering Workflow
+```
+Table QR Code → Customer Menu (/menu/:tableId) → Product Selection → Cart Drawer → Submit Order → Orders Queue → Kitchen Service → Staff Payment → Sale & Receipt
+```
+1. Customers scan the physical QR code on their dining table (e.g. Table 01 routes to `/menu/t1`, Table 02 routes to `/menu/t2`).
+2. If an invalid table route is accessed (e.g. `/menu/invalid`), a clean "Table not found" fallback screen is displayed.
+3. The customer browses the mobile menu, searches dishes, and adds items to the floating cart.
+4. Clicking "Send Order to Kitchen" dispatches the order ticket without requiring customer login or online payment.
+5. The order appears in the staff Orders queue (`/orders`) with status `Pending` and payment status `Unpaid`. The table updates to `Occupied`.
+6. Staff progress the order through kitchen stages (`Preparing`, `Cooking`, `Ready`, `Served`), and collect payment upon conclusion of the meal.
+
+### 3. Refund Workflow
+```
+Completed Sale → View Details → Partial / Full Refund Selection → Business Invariant Validation → Reversal Transaction (-$XX.XX) → Updated Sale
+```
+1. Staff locate completed transactions in Sales History (`/sales`) using date presets, payment filters, or omni-search.
+2. Clicking "Details" opens `SaleDetailModal` showing itemized lines, unit prices, line totals, and prior refunds.
+3. Staff can initiate a **Partial Refund** on a specific item (clamped to remaining quantity) or a **Full Refund** of the remaining balance.
+4. The refund engine validates all 10 invariants (positive quantity, non-zero, within remaining balance, sale not cancelled).
+5. The engine decrements remaining quantities immutably, generates a linked reverse transaction with negative amount, and marks the sale `Refunded` when fully refunded.
 
 ---
 
@@ -25,16 +61,16 @@ The following features are fully implemented and verified in the codebase:
 - **Menu / Product Management**: Comprehensive catalog management supporting device-based image uploads, formatted pricing, stock toggling, single dish naming, and deletion protection.
 - **Categories**: Category manager with duplicate prevention, real-time filtering, and category deletion safety checks.
 - **POS**: Point-of-Sale terminal routing and table-specific ordering workflows.
-- **Orders**: Kitchen and live order management tracking order queue tickets across workflow states (`In Progress`, `Ready`, `Completed`) with cancellation action gates.
-- **Payments**: Multi-tender payment recording supporting Cash, Credit Card, Debit Card, QR Code, and Digital Wallet with dual-currency cash change calculations.
+- **Orders**: Kitchen and live order management tracking order queue tickets across workflow states (`Pending`, `Preparing`, `Cooking`, `Ready`, `Served`, `Completed`) with cancellation action gates.
+- **Payments**: Multi-tender payment recording supporting Cash, Credit Card, Debit Card, QR Code, and Digital Wallet with dual-currency cash change calculations (USD & KHR at 4,100 KHR/USD).
 - **Sales**: Complete historical transaction ledger recording order numbers, timestamps, table assignments, itemized breakdowns, taxes, and tender methods.
 - **Sales Search & Filters**: Multi-faceted real-time filtering across 5 dimensions simultaneously: Date range, Payment method, Order type, Payment status, and Omni-search.
 - **Refunds**: Automated refund engine enforcing 10 core business invariants: partial line-item refunds, remaining refundable balance calculations, cumulative limit checks, and printable reverse refund transactions.
-- **Customers**: Per-transaction guest identity tracking supporting named diners and walk-in guests with automatic receipt and refund linkage.
 - **Staff**: Team member roster management, active shift toggling (`Active` / `Off Duty`), station assignments, and role-based editing.
-- **Tables**: Interactive floor plan supporting multiple sections (Main Dining, Indoor Booths, Outdoor Terrace), occupancy state toggling, and table QR code printing.
-- **Reports**: Executive analytics reports covering gross revenues, top performing categories, and station metrics.
+- **Tables & QR Generation**: Interactive floor plan supporting multiple sections (Main Dining, Indoor Booths, Outdoor Terrace), occupancy state toggling, unique table QR generation, QR preview, QR PNG download, and isolated QR tent printing.
 - **Customer QR Menu**: Public, mobile-optimized guest interface with category chips, dish search, item counters, cart drawer, and direct send-to-kitchen order dispatch.
+- **Receipts & Thermal Printing**: 80mm printable thermal receipt component with print CSS isolation, reprint idempotency, and full breakdown of items, tenders, and taxes.
+- **Reports**: Executive analytics reports covering gross revenues, guest counts, and station metrics.
 
 ---
 
@@ -52,6 +88,7 @@ The application is built using modern web standards without external runtime bac
 | **@tailwindcss/vite** | `^4.3.3` | Native Vite integration for Tailwind v4 |
 | **Vite** | `^8.3.0` | Ultra-fast development server & bundler |
 | **Zustand** | `^5.0.15` | Lightweight client state management & session persistence |
+| **qrcode** | `^1.5.4` | Scannable high-contrast QR code generation |
 | **Lucide React** | `^0.546.0` | Production vector icon library |
 | **Motion** | `^12.23.24` | Animation and transition primitives |
 | **tsx** | `^4.21.0` | TypeScript test execution runner |
@@ -107,56 +144,10 @@ Compile and bundle the application for production:
 npm run build
 ```
 
-This compiles optimized client assets into the `dist/` directory.
-
----
-
-## Testing
-
-Execute the complete automated test suite (15 regression and domain test suites):
-
-```bash
-for f in $(find src -name "*.test.ts" | sort); do npx tsx "$f"; done
-```
-
-Or execute individual test suites directly with `npx tsx`:
-
-```bash
-# Permissions & RBAC tests
-npx tsx src/auth/permissions.test.ts
-
-# Product management tests
-npx tsx src/data/products.test.ts
-
-# Sales list & details tests
-npx tsx src/data/sales9A.test.ts
-npx tsx src/data/sales9B.test.ts
-npx tsx src/data/sales9C.test.ts
-
-# Sales filtering & summary tests
-npx tsx src/data/sales9D.test.ts
-npx tsx src/data/sales9E.test.ts
-
-# Refund workflow & invariant tests
-npx tsx src/data/sales9F.test.ts
-npx tsx src/data/refund9F3.test.ts
-npx tsx src/data/refund9F3B.test.ts
-npx tsx src/data/refund9F3C.test.ts
-npx tsx src/data/refund9F3D.test.ts
-npx tsx src/data/refund9F4.test.ts
-npx tsx src/data/refund9F4B.test.ts
-npx tsx src/data/refund9F4C.test.ts
-```
-
----
-
-## Production Build
-
-The production build is generated via Vite using standard ES module output:
-
-- **HTML Entry**: `dist/index.html` (~0.9 kB)
-- **Styles**: `dist/assets/index-*.css` (~54.7 kB, ~9.8 kB gzip)
-- **JavaScript Bundle**: `dist/assets/index-*.js` (~451.3 kB, ~123.8 kB gzip)
+This compiles optimized client assets into the `dist/` directory:
+- `dist/index.html` (~0.94 kB)
+- `dist/assets/index-*.css` (~64.5 kB)
+- `dist/assets/index-*.js` (~552 kB)
 
 To preview the production bundle locally:
 
@@ -166,13 +157,45 @@ npm run preview
 
 ---
 
-## Environment Variables
+## Testing
 
-**No external environment variables are required** to run the frontend application locally or in production.
+Execute the complete automated test suite (21 test suites, 100% passing):
 
-For AI Studio integration, an optional template is provided in `.env.example`:
-- `GEMINI_API_KEY`: Placeholder for optional Gemini API features.
-- `APP_URL`: Optional hosting URL reference for hosted environments.
+```bash
+for f in $(find src -name "*.test.ts" | sort); do npx tsx "$f"; done
+```
+
+Or execute individual test suites directly with `npx tsx`:
+
+```bash
+# E.g. Run Step 17 Final Frontend Integration tests
+npx tsx src/data/integration17.test.ts
+
+# E.g. Run Step 18 QA & Regression tests
+npx tsx src/data/qaRegression18.test.ts
+
+# E.g. Run Table QR tests
+npx tsx src/data/tableQR9D.test.ts
+
+# E.g. Run Customer QR Ordering tests
+npx tsx src/data/qrOrdering15.test.ts
+
+# E.g. Run Receipt & Thermal Print tests
+npx tsx src/data/receipt16.test.ts
+```
+
+---
+
+## Clean Production Baseline & Test Fixtures
+
+- **Clean Production Runtime**: The production application starts in a completely clean, unpolluted state:
+  - Products: `0`
+  - Orders: `0`
+  - Sales: `0`
+  - Refunds: `0`
+  - Staff: `0`
+  - Floor Tables: `8` default tables across 3 dining sections.
+- **Test Fixtures**: Static reference fixtures are isolated in `src/data/mockData.ts` to power the automated regression test suites without polluting production runtime state.
 
 ---
 
@@ -183,8 +206,11 @@ RestoControl/
 ├── docs/                      # Architectural and domain documentation
 │   ├── 06-authentication.md   # Authentication architecture & session flow
 │   ├── 07-role-permissions.md  # RBAC specification & permission matrices
+│   ├── 08-pos-product-selection.md # POS product selection and filtering
+│   ├── 09-order-management.md # Orders lifecycle & kitchen queue
 │   ├── 10-menu-management.md  # Menu & catalog management specification
 │   ├── 11-sales-management.md # Sales history, receipts & filtering architecture
+│   ├── workflows.md           # Operational workflows (POS, QR, Refund)
 │   ├── refunds.md             # Refund business rules & calculation invariants
 │   ├── testing.md             # Automated test suite coverage & execution guide
 │   └── deployment.md          # Production deployment guide
@@ -196,16 +222,19 @@ RestoControl/
 │   │   ├── customer/          # CartDrawer, QRProductCard
 │   │   ├── layout/            # Navigation, headers, sidebar
 │   │   ├── menu/              # MenuCard, MenuTable, Add/Edit modals, CategoryManager
-│   │   ├── sales/             # SalesTable, SalesFilters, SaleDetailModal, SaleReceiptModal
+│   │   ├── orders/            # OrderDetailsModal, OrderReceiptModal, EditOrderNoteModal
+│   │   ├── pos/               # ProductGrid, TicketPanel, PaymentModal
+│   │   ├── sales/             # SalesTable, SalesFilters, SaleDetailModal, SaleReceiptModal, PartialRefundModal, FullRefundModal
 │   │   ├── staff/             # StaffTable
+│   │   ├── tables/            # TableQRModal
 │   │   └── ui/                # Button, Input, Modal, Card, Badge, EmptyState, LoadingState
-│   ├── data/                  # Test fixtures (mockData.ts) and 15 automated test suites
-│   ├── hooks/                 # Custom React hooks (useAuth, usePermission, usePartialRefund, useFullRefund)
+│   ├── data/                  # Test fixtures (mockData.ts) and 21 automated test suites
+│   ├── hooks/                 # Custom React hooks (useAuth, usePermission, usePartialRefund, useFullRefund, useMenu)
 │   ├── layouts/               # DashboardLayout shell
-│   ├── pages/                 # Route page components (Dashboard, Menu, Sales, Staff, Tables, etc.)
+│   ├── pages/                 # Route page components (Dashboard, POS, Orders, Menu, Tables, Sales, Staff, Reports, Settings, QRMenu, TableMenuRoute)
 │   ├── routes/                # Central AppRoutes and route definitions
 │   ├── types/                 # Domain interfaces (MenuItem, Transaction, Table, StaffMember, etc.)
-│   └── utils/                 # Business logic engines (refundRules, refundUtils, format, salesSearch)
+│   └── utils/                 # Business logic engines (refundRules, refundUtils, format, salesSearch, qr)
 ├── .env.example               # Environment variable template
 ├── package.json               # Scripts and dependency specifications
 ├── tsconfig.json              # TypeScript compiler configuration
@@ -214,23 +243,11 @@ RestoControl/
 
 ---
 
-## Demo / Test Data
-
-- **Production Runtime**: The production application starts in a completely clean state:
-  - Products: `0`
-  - Orders: `0`
-  - Sales: `0`
-  - Refunds: `0`
-  - Staff: `0`
-  - Default Table Configuration: `8` floor tables across 3 dining sections.
-- **Test Fixtures**: Static reference fixtures are isolated in `src/data/mockData.ts` to power the automated regression test suites without polluting production runtime state.
-
----
-
 ## Current Status
 
 - **Status**: Production Ready (Frontend Architecture)
 - **Static Verification**: `npm run lint` passing (0 errors).
 - **Build Verification**: `npm run build` passing cleanly.
-- **Automated Tests**: 15 of 15 automated test suites passing (100% pass rate).
+- **Automated Tests**: 21 of 21 automated test suites passing (100% pass rate).
 - **Security Audit**: All 20 RBAC permissions verified, zero exposed secrets, zero unsafe frontend APIs (`eval`, `dangerouslySetInnerHTML`).
+- **Workflows Verified**: POS Terminal, Customer QR Menu, and Multi-Rule Refund workflows fully connected and verified end-to-end.

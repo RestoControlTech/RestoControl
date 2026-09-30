@@ -19,7 +19,7 @@ export default function AccessDenied({ permission, onNavigateHome }: AccessDenie
     if (onNavigateHome) {
       onNavigateHome();
     } else {
-      navigate('/dashboard');
+      navigate('/pos');
     }
   };
 
@@ -74,7 +74,7 @@ export default function AccessDenied({ permission, onNavigateHome }: AccessDenie
             onClick={handleBack}
             className="w-full sm:w-auto font-bold px-6"
           >
-            Back to Dashboard
+            Back to POS
           </Button>
         </div>
       </Card>

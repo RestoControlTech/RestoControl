@@ -25,6 +25,10 @@ export interface TicketPanelProps {
   selectedTableId?: string;
   orderNote?: string;
   orderStatus?: OrderStatus;
+  orderNumber?: string;
+  orderSource?: string;
+  isExistingOrder?: boolean;
+  paymentStatus?: string;
   onTableChange?: (tableId: string) => void;
   onOrderNoteChange?: (note: string) => void;
   onIncreaseQuantity: (productId: string) => void;
@@ -41,6 +45,10 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
   selectedTableId = 't1',
   orderNote = '',
   orderStatus = 'Draft',
+  orderNumber,
+  orderSource,
+  isExistingOrder = false,
+  paymentStatus,
   onTableChange,
   onOrderNoteChange,
   onIncreaseQuantity,
@@ -114,6 +122,21 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
             </span>
           )}
         </div>
+
+        {/* Existing Order Info Banner */}
+        {isExistingOrder && (
+          <div className="bg-orange-50 border border-orange-200/80 rounded-xl px-3 py-2 flex items-center justify-between text-[11px] font-bold text-orange-950 shadow-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="bg-orange-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+                {orderSource || 'QR'} ORDER
+              </span>
+              <span className="font-extrabold">{orderNumber}</span>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-100/90 px-2 py-0.5 rounded">
+              {paymentStatus || 'UNPAID'}
+            </span>
+          </div>
+        )}
 
         {/* 1. Table Number Selection Field */}
         <div>
@@ -289,7 +312,7 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
           fullWidth
           disabled={!canProceed}
           onClick={onProceedOrder}
-          className="mt-2"
+          className="mt-2 font-black"
           iconRight={<ArrowRight className="w-4 h-4" />}
           title={
             !canProceed
@@ -299,7 +322,9 @@ export const TicketPanel: React.FC<TicketPanelProps> = ({
               : undefined
           }
         >
-          Proceed to Order ({formatPrice(grandTotal)})
+          {isExistingOrder
+            ? `Take Payment (${formatPrice(grandTotal)})`
+            : `Proceed to Order (${formatPrice(grandTotal)})`}
         </Button>
       </div>
     </Card>

@@ -8,6 +8,7 @@ import { Printer, X } from 'lucide-react';
 import { Transaction } from '../../types';
 import { formatPrice } from '../../utils/format';
 import { Modal, Button, Badge } from '../ui';
+import { useSettings } from '../../hooks/useSettings';
 
 export interface SaleReceiptModalProps {
   isOpen: boolean;
@@ -25,14 +26,17 @@ export const SaleReceiptModal: React.FC<SaleReceiptModalProps> = ({
   isOpen,
   onClose,
   sale,
-  restaurantInfo = {
-    name: 'Kuro Bistro',
-    phone: '+855 23 987 654',
-    address: 'Phnom Penh, Cambodia',
-    logoText: 'K',
-  },
+  restaurantInfo,
 }) => {
+  const { settings } = useSettings();
   const printAreaRef = useRef<HTMLDivElement>(null);
+
+  const info = {
+    name: restaurantInfo?.name || settings.restaurantName || 'Kuro Bistro',
+    phone: restaurantInfo?.phone || settings.phoneNumber || '+855 23 987 654',
+    address: restaurantInfo?.address || settings.address || 'Phnom Penh, Cambodia',
+    logoText: restaurantInfo?.logoText || (settings.restaurantName ? settings.restaurantName.charAt(0).toUpperCase() : 'K'),
+  };
 
   if (!sale) return null;
 
@@ -92,16 +96,16 @@ export const SaleReceiptModal: React.FC<SaleReceiptModalProps> = ({
             <div className="text-center pb-3 border-b border-dashed border-slate-300 space-y-1">
               {/* Logo / Monogram */}
               <div className="w-10 h-10 rounded-xl bg-orange-600 text-white font-black text-xl flex items-center justify-center mx-auto mb-1.5 shadow-xs">
-                {restaurantInfo.logoText || 'K'}
+                {info.logoText || 'K'}
               </div>
               <h3 className="font-black text-base tracking-tight text-slate-900 font-sans">
-                {restaurantInfo.name || 'Kuro Bistro'}
+                {info.name || 'Kuro Bistro'}
               </h3>
               <p className="text-[10px] text-slate-500 font-medium">
-                {restaurantInfo.address}
+                {info.address}
               </p>
               <p className="text-[10px] text-slate-500 font-medium">
-                Tel: {restaurantInfo.phone}
+                Tel: {info.phone}
               </p>
             </div>
 
@@ -116,15 +120,9 @@ export const SaleReceiptModal: React.FC<SaleReceiptModalProps> = ({
                 <span>{sale.dateTime}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500">Order Type:</span>
-                <span className="font-bold">{sale.type}</span>
+                <span className="text-slate-500">Table:</span>
+                <span className="font-bold">{sale.table || 'Dine-in'}</span>
               </div>
-              {sale.table && (
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Table:</span>
-                  <span className="font-bold">{sale.table}</span>
-                </div>
-              )}
               {sale.customerName && (
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500">Customer:</span>
