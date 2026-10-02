@@ -20,6 +20,7 @@ import Sales from '../pages/dashboard/Sales';
 import Settings from '../pages/dashboard/Settings';
 import Orders from '../pages/dashboard/Orders';
 import POS from '../pages/dashboard/POS';
+import Profile from '../pages/dashboard/Profile';
 import QRMenu from '../pages/customer/QRMenu';
 import { TableMenuRoute } from '../pages/customer/TableMenuRoute';
 
@@ -110,12 +111,6 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
         path="/customer"
         element={
           <div id="client-app-root" className="relative">
-            <div
-              className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
-              onClick={() => navigate('/pos')}
-            >
-              <span>← Back to POS Station</span>
-            </div>
             <QRMenu
               initialMenuItems={menuItems}
               categories={categories}
@@ -282,6 +277,21 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
               onSwitchToCustomerView={() => navigate('/customer')}
             >
               <Settings />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSwitchToCustomerView={() => navigate('/customer')}
+            >
+              <Profile />
             </DashboardLayout>
           </ProtectedRoute>
         }

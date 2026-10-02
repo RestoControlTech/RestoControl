@@ -23,7 +23,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onSelect,
   className = '',
 }) => {
-  const isOutOfStock = !product.available || product.stock === 0;
+  const isOutOfStock = product.available === false || product.inStock === false || product.stock === 0;
 
   const handleAdd = () => {
     if (!isOutOfStock) {
@@ -95,16 +95,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
       {/* Stock Footer & Action Button */}
       <div className="flex items-center justify-between border-t border-slate-50 pt-2 mt-auto">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              isOutOfStock ? 'bg-red-500' : 'bg-emerald-500'
-            }`}
-          />
-          <span className="text-[9px] font-bold text-slate-400">
-            {isOutOfStock ? 'Out of Stock' : `${product.stock} left`}
-          </span>
-        </div>
+        {isOutOfStock ? (
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            <span className="text-[9px] font-bold text-red-500">
+              Out of Stock
+            </span>
+          </div>
+        ) : (
+          <div />
+        )}
 
         <Button
           variant={isOutOfStock ? 'secondary' : 'subtle-orange'}

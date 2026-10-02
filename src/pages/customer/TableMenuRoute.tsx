@@ -73,12 +73,6 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
 
   return (
     <div id="client-app-root" className="relative">
-      <div
-        className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
-        onClick={() => navigate('/pos')}
-      >
-        <span>← ត្រឡប់ទៅ POS</span>
-      </div>
       <QRMenu
         initialMenuItems={menuItems}
         categories={categories}

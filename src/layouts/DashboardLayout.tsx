@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   ShoppingBag, 
@@ -18,7 +18,8 @@ import {
   Bell, 
   ChevronRight, 
   Terminal,
-  X
+  X,
+  User as UserIcon
 } from 'lucide-react';
 import { DashboardTab, Permission } from '../types';
 import { SearchBar, Button } from '../components/ui';
@@ -27,6 +28,7 @@ import { usePermission } from '../hooks/usePermission';
 import { useSettings } from '../hooks/useSettings';
 import { useTranslation } from '../i18n';
 import { useOrderNotificationStore } from '../store/orderNotification.store';
+import { UserProfileModal } from '../components/profile';
 
 export interface NavItemConfig {
   id: DashboardTab;
@@ -46,6 +48,7 @@ export const SIDEBAR_NAV_ITEMS: NavItemConfig[] = [
   { id: 'staff', path: '/staff', label: 'Staff', icon: Users, permission: 'staff.view' },
   { id: 'customers', path: '/customer', label: 'Customers', icon: UserCheck, permission: 'pos.use' },
   { id: 'settings', path: '/settings', label: 'Settings', icon: Settings, permission: 'settings.view' },
+  { id: 'profile', path: '/profile', label: 'Profile', icon: UserIcon },
 ];
 
 interface DashboardLayoutProps {
@@ -77,6 +80,24 @@ export default function DashboardLayout({
   const { t, language } = useTranslation();
 
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('#topbar-user-dropdown') && !target.closest('#btn-topbar-profile')) {
+        setShowUserDropdown(false);
+      }
+    };
+    if (showUserDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showUserDropdown]);
 
   const { notifications, activeToast, dismissToast, markAsHandled, clearAll } =
     useOrderNotificationStore();
@@ -84,8 +105,18 @@ export default function DashboardLayout({
   const unhandledOrdersCount = notifications.filter((n) => !n.handled).length;
 
   const currentUser = authUser
-    ? { name: authUser.name, role: authUser.role === 'admin' ? 'Administrator' : 'Staff Member' }
-    : propUser || { name: 'Staff User', role: 'Staff' };
+    ? {
+        id: authUser.id,
+        name: authUser.name,
+        email: authUser.email,
+        phone: authUser.phone,
+        role: authUser.role === 'admin' ? 'Administrator' : 'Staff Member',
+        rawRole: authUser.role,
+        avatar: authUser.avatar,
+      }
+    : propUser
+    ? { id: 'usr-guest', name: propUser.name, email: '', phone: '', role: propUser.role, rawRole: 'staff', avatar: undefined }
+    : { id: 'usr-guest', name: 'Staff User', email: '', phone: '', role: 'Staff', rawRole: 'staff', avatar: undefined };
 
   // Filter navigation items based on centralized permission authorization
   const visibleNavItems = SIDEBAR_NAV_ITEMS.filter((item) =>
@@ -201,13 +232,31 @@ export default function DashboardLayout({
         {/* Sidebar Footer Info */}
         <div className="p-4 border-t border-slate-50 space-y-3">
           {currentUser && (
-            <div id="current-user-info" className="flex items-center gap-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100/60">
-              <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-xs uppercase shadow-xs">
-                {currentUser.name.slice(0, 2)}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-slate-800 truncate leading-snug">{currentUser.name}</div>
-                <div className="text-[10px] text-slate-400 font-medium">{currentUser.role}</div>
+            <div
+              id="current-user-info"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-3 bg-slate-50/70 hover:bg-orange-50/50 p-2.5 rounded-xl border border-slate-100/60 hover:border-orange-200 transition-all cursor-pointer group"
+              title="Click to view and edit profile"
+            >
+              {currentUser.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-8 h-8 rounded-lg object-cover shadow-xs border border-orange-200 group-hover:scale-105 transition-transform shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center font-bold text-xs uppercase shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                  {currentUser.name.slice(0, 2)}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-slate-800 truncate leading-snug group-hover:text-orange-600 transition-colors">
+                  {currentUser.name}
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium flex items-center justify-between">
+                  <span>{currentUser.role}</span>
+                  <span className="text-[9px] text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity font-bold">Edit</span>
+                </div>
               </div>
             </div>
           )}
@@ -335,9 +384,110 @@ export default function DashboardLayout({
                 )}
               </div>
 
-              {/* Avatar block */}
-              <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xs font-bold hover:scale-105 transition-transform cursor-pointer">
-                {currentUser?.name.slice(0, 2) || (settings.restaurantName ? settings.restaurantName.slice(0, 2).toUpperCase() : 'RC')}
+              {/* User Avatar & Dropdown Menu */}
+              <div className="relative">
+                <button
+                  id="btn-topbar-profile"
+                  type="button"
+                  onClick={() => setShowUserDropdown((prev) => !prev)}
+                  className="w-8 h-8 rounded-lg overflow-hidden bg-orange-50 text-orange-600 flex items-center justify-center text-xs font-bold hover:scale-105 transition-transform cursor-pointer border border-orange-200/60 ring-2 ring-transparent hover:ring-orange-200"
+                  title="My Profile & Account"
+                >
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    currentUser?.name.slice(0, 2) || (settings.restaurantName ? settings.restaurantName.slice(0, 2).toUpperCase() : 'RC')
+                  )}
+                </button>
+
+                {showUserDropdown && (
+                  <div
+                    id="topbar-user-dropdown"
+                    className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1 animate-fade-in"
+                  >
+                    {/* User Summary Header */}
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100/80 flex items-center gap-3">
+                      {currentUser.avatar ? (
+                        <img
+                          src={currentUser.avatar}
+                          alt={currentUser.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-orange-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center font-black text-sm uppercase shrink-0">
+                          {currentUser.name.slice(0, 2)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black text-slate-800 truncate">
+                          {currentUser.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {currentUser.email || currentUser.role}
+                        </p>
+                        <span className="inline-block mt-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">
+                          {currentUser.role}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          setIsProfileModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors cursor-pointer text-left"
+                      >
+                        <UserIcon className="w-4 h-4 text-orange-500" />
+                        <span>My Profile (Drop Avatar)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          navigate('/settings');
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
+                      >
+                        <Settings className="w-4 h-4 text-slate-400" />
+                        <span>Settings</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          handleSwitchToCustomer();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left"
+                      >
+                        <Terminal className="w-4 h-4 text-slate-400" />
+                        <span>Customer QR View</span>
+                      </button>
+
+                      <div className="border-t border-slate-100 my-1" />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          handleLogoutClick();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors cursor-pointer text-left"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Log Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -399,6 +549,12 @@ export default function DashboardLayout({
           </Button>
         </div>
       )}
+
+      {/* User Profile Modal with Drag & Drop Avatar */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
 
     </div>
   );

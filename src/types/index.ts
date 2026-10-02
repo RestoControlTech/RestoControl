@@ -12,6 +12,10 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  avatar?: string;
+  avatarPublicId?: string;
+  phone?: string;
+  joinedDate?: string;
 }
 
 export interface AuthState {
@@ -19,6 +23,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   login: (email: string, password: string) => { success: boolean; error?: string };
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 export interface MenuItem {
@@ -162,7 +167,7 @@ export type Sale = Transaction;
 
 export type AppView = 'customer-qr' | 'dashboard';
 
-export type DashboardTab = 'pos' | 'orders' | 'sales' | 'menu' | 'tables' | 'staff' | 'customers' | 'settings' | 'dashboard' | 'reports';
+export type DashboardTab = 'pos' | 'orders' | 'sales' | 'menu' | 'tables' | 'staff' | 'customers' | 'settings' | 'dashboard' | 'reports' | 'profile';
 
 export type OrderType = 'Dine In' | 'Takeaway' | 'Delivery';
 

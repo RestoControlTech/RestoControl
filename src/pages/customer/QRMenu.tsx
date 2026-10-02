@@ -207,12 +207,9 @@ export default function QRMenu({
                 </div>
               )}
               <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="font-bold text-stone-900 leading-tight text-xs">
-                    {settings.restaurantName || 'Kuro Bistro'}
-                  </h1>
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
-                </div>
+                <h1 className="font-bold text-stone-900 leading-tight text-xs">
+                  {settings.restaurantName || 'Kuro Bistro'}
+                </h1>
                 <p className="text-[10px] text-stone-500 font-medium">ភោជនីយដ្ឋាន & អាហារ</p>
               </div>
             </div>
@@ -262,29 +259,6 @@ export default function QRMenu({
 
         </header>
 
-        {/* State Switcher & Simulation Tool bar (Discrete developer helper) */}
-        <div className="bg-stone-50 border-b border-stone-200/60 px-4 py-1.5 flex items-center justify-between text-[10px] text-stone-500 font-bold tracking-tight">
-          <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            ម៉ឺនុយ QR កុម្ម៉ង់អាហារ
-          </span>
-          <div className="flex items-center gap-1">
-            <span className="text-stone-400">ស្ថានភាព:</span>
-            {(['normal', 'loading', 'empty', 'error'] as const).map(s => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setUiState(s)}
-                className={`px-1.5 py-0.5 rounded capitalize leading-none cursor-pointer ${uiState === s
-                    ? 'bg-stone-800 text-white font-black'
-                    : 'hover:bg-stone-200 text-stone-500'
-                  }`}
-              >
-                {s === 'normal' ? 'ទូទៅ' : s === 'loading' ? 'កំពុងដំណើរការ' : s === 'empty' ? 'ទទេ' : 'កំហុស'}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Core items scroll area panel */}
         <main className="flex-1 px-3.5 pt-3 pb-28 overflow-y-auto">

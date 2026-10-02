@@ -208,6 +208,12 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
         });
       },
+
+      updateUser: (updates: Partial<User>) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...updates } : null,
+        }));
+      },
     }),
     {
       name: 'restocontrol_auth_session',

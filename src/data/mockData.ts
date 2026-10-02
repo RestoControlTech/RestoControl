@@ -62,17 +62,6 @@ export const MENU_ITEMS: MenuItem[] = [
     inStock: true
   },
   {
-    id: 'main-37',
-    category: 'ម្ហូបចម្បង',
-    name: 'ក្តាមឆាពងទាប្រៃ',
-    description: 'សាច់ក្តាមស្រស់ឆាស្រោបពងទាប្រៃឈ្ងុយឆ្ងាញ់រសជាតិដិតដល់',
-    price: 6.00,
-    image: 'https://res.cloudinary.com/cc67bunh/image/upload/v1790929417/%E1%9E%80%E1%9F%92%E1%9E%8F%E1%9E%B6%E1%9E%98%E1%9E%86%E1%9E%B6%E1%9E%96%E1%9E%84%E1%9F%92%E1%9E%94%E1%9E%B6%E1%9E%A0%E1%9F%92%E1%9E%82%E1%9F%81%E1%9E%91%E1%9E%B8%E1%9E%86%E1%9E%B6.png',
-    badge: 'CHEF PICK',
-    tag: 'ម្ហូបចម្បង',
-    inStock: true
-  },
-  {
     id: 'main-38',
     category: 'ម្ហូបចម្បង',
     name: 'ស្បាហ្គេទីឆា',
@@ -260,17 +249,6 @@ export const MENU_ITEMS: MenuItem[] = [
     inStock: true
   },
   {
-    id: 'seafood-25',
-    category: 'អាហារសមុទ្រ',
-    name: 'បង្គារ / ក្តាម / ក្តាមប្រៃ',
-    description: 'គ្រឿងសមុទ្រស្រស់ជ្រលក់ទឹកត្រីកោះកុង ឬក្តាមប្រៃរសជាតិដិតដល់',
-    price: 5.00,
-    image: 'https://images.unsplash.com/photo-1559742811-82286364ceaf?w=500&auto=format&fit=crop&q=80',
-    badge: null,
-    tag: 'អាហារសមុទ្រ',
-    inStock: true
-  },
-  {
     id: 'seafood-26',
     category: 'អាហារសមុទ្រ',
     name: 'បុកល្ហុងចម្រុះ',
@@ -381,17 +359,6 @@ export const MENU_ITEMS: MenuItem[] = [
     inStock: true
   },
   {
-    id: 'fried-5',
-    category: 'ចៀន/បំពង',
-    name: 'ស្លាបមាន់បំពង',
-    description: 'ស្លាបមាន់បំពងស្រួយក្រៅទន់ក្នុងរសជាតិឈ្ងុយឆ្ងាញ់',
-    price: 3.50,
-    image: 'https://images.unsplash.com/photo-1527477378378-5775c97042a9?w=500&auto=format&fit=crop&q=80',
-    badge: null,
-    tag: 'ចៀន/បំពង',
-    inStock: true
-  },
-  {
     id: 'fried-6',
     category: 'ចៀន/បំពង',
     name: 'ស្លាបមាន់ហិរ',
@@ -399,28 +366,6 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 3.50,
     image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=500&auto=format&fit=crop&q=80',
     badge: 'SPICY',
-    tag: 'ចៀន/បំពង',
-    inStock: true
-  },
-  {
-    id: 'fried-7',
-    category: 'ចៀន/បំពង',
-    name: 'ប្រហិតសាច់ត្រីខ្មែរ',
-    description: 'ប្រហិតសាច់ត្រីបំពងបែបខ្មែរ ឈ្ងុយគ្រឿងស្លឹកក្រូច',
-    price: 4.50,
-    image: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=500&auto=format&fit=crop&q=80',
-    badge: 'KHMER STYLE',
-    tag: 'ចៀន/បំពង',
-    inStock: true
-  },
-  {
-    id: 'fried-8',
-    category: 'ចៀន/បំពង',
-    name: 'កំពឹសបំពងល្ង',
-    description: 'កំពឹសស្រស់បំពងស្រួយប្រឡាក់ល្ងរសជាតិឆ្ងាញ់',
-    price: 3.50,
-    image: 'https://images.unsplash.com/photo-1559742811-82286364ceaf?w=500&auto=format&fit=crop&q=80',
-    badge: null,
     tag: 'ចៀន/បំពង',
     inStock: true
   },
@@ -453,17 +398,6 @@ export const MENU_ITEMS: MenuItem[] = [
     description: 'បង្គារស្រស់បំពងស្រួយរោយខ្ទឹមសបំពងឈ្ងុយ',
     price: 5.00,
     image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=500&auto=format&fit=crop&q=80',
-    badge: null,
-    tag: 'ចៀន/បំពង',
-    inStock: true
-  },
-  {
-    id: 'fried-12',
-    category: 'ចៀន/បំពង',
-    name: 'បង្គារបំពងម៉េយូរនេស',
-    description: 'បង្គារបំពងស្រួយស្រោបទឹកជ្រលក់ម៉េយូរនេសឈ្ងុយឆ្ងាញ់',
-    price: 5.00,
-    image: 'https://images.unsplash.com/photo-1559742811-82286364ceaf?w=500&auto=format&fit=crop&q=80',
     badge: null,
     tag: 'ចៀន/បំពង',
     inStock: true
