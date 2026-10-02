@@ -42,9 +42,9 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
           <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
             <QrCode className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight mb-2">Table not found</h2>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight mb-2">រកមិនឃើញតុទេ</h2>
           <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-            The table reference <code className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-800 font-mono font-semibold">"{tableId}"</code> was not found. Please scan a valid table QR code or notify staff.
+            មិនមានទិន្នន័យតុ <code className="bg-stone-100 px-1.5 py-0.5 rounded text-stone-800 font-mono font-semibold">"{tableId}"</code> នៅក្នុងប្រព័ន្ធទេ។ សូមស្កេនកូដ QR តុឡើងវិញ។
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -53,7 +53,7 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
               icon={<Home className="w-3.5 h-3.5" />}
               onClick={() => navigate('/pos')}
             >
-              Return to POS Station
+              ត្រឡប់ទៅកាន់ POS
             </Button>
             {tables.length > 0 && (
               <Button
@@ -62,7 +62,7 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
                 icon={<ArrowLeft className="w-3.5 h-3.5" />}
                 onClick={() => navigate(`/menu/${tables[0].id}`)}
               >
-                Open {tables[0].name} Menu
+                បើកម៉ឺនុយ {tables[0].name}
               </Button>
             )}
           </div>
@@ -77,7 +77,7 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
         className="fixed top-2 left-2 z-50 bg-stone-900 text-white rounded-xl py-1 px-2.5 font-bold text-[10px] tracking-tight hover:scale-105 active:scale-95 transition-all shadow-md cursor-pointer border border-stone-800 flex items-center gap-1"
         onClick={() => navigate('/pos')}
       >
-        <span>← Back to POS Station</span>
+        <span>← ត្រឡប់ទៅ POS</span>
       </div>
       <QRMenu
         initialMenuItems={menuItems}

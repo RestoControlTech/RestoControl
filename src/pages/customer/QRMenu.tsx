@@ -51,29 +51,16 @@ export default function QRMenu({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Merge categories from props with any categories present in initialMenuItems
+  // Strictly use categories from props (default to Khmer 'ទាំងអស់')
   const displayCategories = useMemo(() => {
-    const map = new Map<string, Category>();
-    map.set('all', { id: 'all', label: 'All Items' });
-
-    (categories || []).forEach((c) => {
-      if (c && c.id) {
-        map.set(c.id.toLowerCase(), { id: c.id, label: c.label });
-      }
-    });
-
-    (initialMenuItems || []).forEach((item) => {
-      if (item && item.category) {
-        const catKey = item.category.toLowerCase();
-        if (!map.has(catKey)) {
-          const label = item.category.charAt(0).toUpperCase() + item.category.slice(1);
-          map.set(catKey, { id: item.category, label });
-        }
-      }
-    });
-
-    return Array.from(map.values());
-  }, [categories, initialMenuItems]);
+    if (categories && categories.length > 0) {
+      return categories.map((c) => ({
+        id: c.id,
+        label: c.id === 'all' && (c.label === 'All Items' || !c.label) ? 'ទាំងអស់' : c.label,
+      }));
+    }
+    return [{ id: 'all', label: 'ទាំងអស់' }];
+  }, [categories]);
 
   // Derived Values
   const cartCount = useMemo(() => {
@@ -93,7 +80,7 @@ export default function QRMenu({
   // Cart quantity actions
   const addToCart = (item: MenuItem) => {
     if (item.inStock === false) {
-      triggerToast(`${item.name} is currently unavailable`);
+      triggerToast(`${item.name} អស់ពីស្តុកហើយ`);
       return;
     }
 
@@ -121,7 +108,7 @@ export default function QRMenu({
       }
       return next;
     });
-    triggerToast(`Added ${item.name}`);
+    triggerToast(`បានបន្ថែម ${item.name}`);
   };
 
   const decrementItem = (itemId: string) => {
@@ -153,7 +140,7 @@ export default function QRMenu({
   const handleKitchenSubmit = () => {
     const cartItems = Object.values(cart);
     if (cartItems.length === 0 || cartCount === 0) {
-      triggerToast('Your order is empty');
+      triggerToast('កន្ត្រករបស់អ្នកទទេ');
       return;
     }
 
@@ -166,7 +153,7 @@ export default function QRMenu({
       count: cartCount,
     }, cartTotal);
     setCart({}); // clear cart
-    triggerToast('Order sent to kitchen!');
+    triggerToast('បានផ្ញើការកុម្ម៉ង់ទៅចង្ក្រានបាយ!');
   };
 
   // Filter Logic
@@ -226,13 +213,13 @@ export default function QRMenu({
                   </h1>
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
                 </div>
-                <p className="text-[10px] text-stone-500 font-medium">Japanese & Fusion Kitchen</p>
+                <p className="text-[10px] text-stone-500 font-medium">ភោជនីយដ្ឋាន & អាហារ</p>
               </div>
             </div>
 
             {/* Table designation tag badge */}
             <div className="bg-stone-100 border border-stone-200/80 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-              <span className="text-[10px] font-bold text-stone-700 tracking-tight">Table <span className="text-orange-600 font-extrabold">{tableName.replace(/^Table\s*/i, '')}</span></span>
+              <span className="text-[10px] font-bold text-stone-700 tracking-tight">តុ <span className="text-orange-600 font-extrabold">{tableName.replace(/^Table\s*/i, '')}</span></span>
             </div>
           </div>
 
@@ -244,7 +231,7 @@ export default function QRMenu({
                 setSearchQuery(val);
                 if (uiState !== 'normal') setUiState('normal');
               }}
-              placeholder="Search dishes, ramen, rolls..."
+              placeholder="ស្វែងរកមុខម្ហូប..."
               size="sm"
               className="bg-stone-100/90 text-stone-800 placeholder-stone-400 border-transparent focus:border-stone-300"
             />
@@ -279,10 +266,10 @@ export default function QRMenu({
         <div className="bg-stone-50 border-b border-stone-200/60 px-4 py-1.5 flex items-center justify-between text-[10px] text-stone-500 font-bold tracking-tight">
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Interactive QR Mode
+            ម៉ឺនុយ QR កុម្ម៉ង់អាហារ
           </span>
           <div className="flex items-center gap-1">
-            <span className="text-stone-400">State:</span>
+            <span className="text-stone-400">ស្ថានភាព:</span>
             {(['normal', 'loading', 'empty', 'error'] as const).map(s => (
               <button
                 key={s}
@@ -293,7 +280,7 @@ export default function QRMenu({
                     : 'hover:bg-stone-200 text-stone-500'
                   }`}
               >
-                {s}
+                {s === 'normal' ? 'ទូទៅ' : s === 'loading' ? 'កំពុងដំណើរការ' : s === 'empty' ? 'ទទេ' : 'កំហុស'}
               </button>
             ))}
           </div>
@@ -307,10 +294,10 @@ export default function QRMenu({
             <div className="flex items-center justify-between mb-2.5 px-0.5">
               <h2 className="text-xs font-black text-stone-900 tracking-tight">
                 {searchQuery
-                  ? `Results for "${searchQuery}"`
-                  : displayCategories.find(c => c.id.toLowerCase() === currentCategory.toLowerCase())?.label || 'All Dishes'}
+                  ? `លទ្ធផលសម្រាប់ "${searchQuery}"`
+                  : displayCategories.find(c => c.id.toLowerCase() === currentCategory.toLowerCase())?.label || 'មុខម្ហូបទាំងអស់'}
               </h2>
-              <span className="text-[10px] text-stone-500 font-bold">{filteredItems.length} item{filteredItems.length === 1 ? '' : 's'}</span>
+              <span className="text-[10px] text-stone-500 font-bold">{filteredItems.length} មុខ</span>
             </div>
           )}
 
@@ -338,8 +325,8 @@ export default function QRMenu({
           {uiState === 'normal' && isMenuCompletelyEmpty && (
             <div id="qr-menu-empty-state">
               <EmptyState
-                title="Menu is currently empty"
-                description="No menu items are currently available for this table. Please check back soon or consult staff."
+                title="មិនទាន់មានមុខម្ហូបនៅឡើយទេ"
+                description="មិនទាន់មានមុខម្ហូបសម្រាប់តុនេះនៅឡើយទេ។ សូមពិគ្រោះជាមួយបុគ្គលិក។"
               />
             </div>
           )}
@@ -348,9 +335,9 @@ export default function QRMenu({
           {(uiState === 'empty' || (uiState === 'normal' && !isMenuCompletelyEmpty && filteredItems.length === 0)) && (
             <div id="qr-search-empty-state">
               <EmptyState
-                title="No items found"
-                description="We couldn't find anything matching your search. Try another query."
-                actionText="Clear Search"
+                title="រកមិនឃើញមុខម្ហូបទេ"
+                description="រកមិនឃើញមុខម្ហូបដែលត្រូវនឹងការស្វែងរករបស់អ្នកទេ។ សូមសាកល្បងពាក្យផ្សេង។"
+                actionText="សម្អាតការស្វែងរក"
                 onAction={clearSearch}
               />
             </div>
@@ -359,9 +346,9 @@ export default function QRMenu({
           {/* 4. ERROR STATE: Server connectivity error banner */}
           {uiState === 'error' && (
             <ErrorState
-              title="Failed to load menu"
-              message="Could not connect to table server. Please check connection and try again."
-              retryText="Retry Loading"
+              title="មិនអាចទាញយកមុខម្ហូបបានទេ"
+              message="មិនអាចភ្ជាប់ទៅកាន់ប្រព័ន្ធបានទេ។ សូមពិនិត្យមើលការតភ្ជាប់ និងព្យាយាមម្តងទៀត។"
+              retryText="ព្យាយាមម្តងទៀត"
               onRetry={() => {
                 setUiState('loading');
                 setTimeout(() => setUiState('normal'), 800);
@@ -389,11 +376,11 @@ export default function QRMenu({
                 </div>
                 <div>
                   <div className="text-xs font-extrabold text-white tracking-tight flex items-center gap-1.5">
-                    <span>{cartCount} item{cartCount === 1 ? '' : 's'}</span>
+                    <span>{cartCount} មុខ</span>
                     <span className="text-stone-500 font-normal">·</span>
                     <span className="text-orange-400 font-black">{formatPrice(cartTotal)}</span>
                   </div>
-                  <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">{tableName} Order</p>
+                  <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">ការកុម្ម៉ង់ {tableName}</p>
                 </div>
               </div>
 
@@ -407,7 +394,7 @@ export default function QRMenu({
                   setIsCartOpen(true);
                 }}
               >
-                View Cart
+                មើលកន្ត្រក
               </Button>
 
             </div>

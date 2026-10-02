@@ -23,12 +23,12 @@ const INITIAL_TABLES: Table[] = [
 ];
 
 const INITIAL_CATEGORIES: Category[] = [
-  { id: 'all', label: 'All Items' },
-  { id: 'popular', label: 'Popular' },
-  { id: 'ramen', label: 'Ramen' },
-  { id: 'sushi', label: 'Sushi & Rolls' },
-  { id: 'appetizers', label: 'Appetizers' },
-  { id: 'drinks', label: 'Drinks' },
+  { id: 'all', label: 'ទាំងអស់' },
+  { id: 'ចៀន/បំពង', label: 'ចៀន/បំពង' },
+  { id: 'ម្ហូបចម្បង', label: 'ម្ហូបចម្បង' },
+  { id: 'អាហារសមុទ្រ', label: 'អាហារសមុទ្រ' },
+  { id: 'ភេសជ្ជៈ', label: 'ភេសជ្ជៈ' },
+  { id: 'ស្រាបៀរ', label: 'ស្រាបៀរ' },
 ];
 
 function AppContent() {
@@ -97,8 +97,8 @@ function AppContent() {
             paymentInfo?.method === 'card'
               ? 'Credit Card'
               : paymentInfo?.method === 'cash'
-              ? 'Cash'
-              : (paymentInfo?.method as any) || 'Cash',
+                ? 'Cash'
+                : (paymentInfo?.method as any) || 'Cash',
           cashReceived: paymentInfo?.cashReceived,
           change: paymentInfo?.change,
           amountPaid: paymentInfo?.cashReceived || newOrder.total,
@@ -122,7 +122,7 @@ function AppContent() {
 
   // Global Actions (synchronizes POS and Customer QR view actions)
   const handleToggleStock = (itemId: string) => {
-    setMenuItems(prev => prev.map(item => 
+    setMenuItems(prev => prev.map(item =>
       item.id === itemId ? { ...item, inStock: !item.inStock } : item
     ));
   };
@@ -152,7 +152,7 @@ function AppContent() {
   };
 
   const handleToggleStaffShift = (staffId: string) => {
-    setStaffList(prev => prev.map(s => 
+    setStaffList(prev => prev.map(s =>
       s.id === staffId ? { ...s, status: s.status === 'Active' ? 'Off Duty' : 'Active' } : s
     ));
   };

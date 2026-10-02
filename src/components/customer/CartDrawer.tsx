@@ -39,8 +39,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {/* Header drawer info */}
         <div className="flex items-center justify-between pb-3 border-b border-stone-100">
           <div>
-            <h3 className="font-extrabold text-stone-900 text-sm">Your Order</h3>
-            <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">{tableName} · Send to Kitchen</p>
+            <h3 className="font-extrabold text-stone-900 text-sm">ការកុម្ម៉ង់របស់អ្នក</h3>
+            <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">{tableName} · ផ្ញើទៅចង្ក្រានបាយ</p>
           </div>
           <button
             type="button"
@@ -56,8 +56,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         <div className="py-3 overflow-y-auto divide-y divide-stone-100 flex-1 space-y-1">
           {Object.keys(cart).length === 0 ? (
             <div className="py-12 text-center text-stone-400 flex flex-col items-center justify-center">
-              <p className="text-xs font-bold text-stone-600">Your order is empty</p>
-              <p className="text-[10px] text-stone-400 mt-1">Tap items on the menu to add them to your order</p>
+              <p className="text-xs font-bold text-stone-600">កន្ត្រករបស់អ្នកទទេ</p>
+              <p className="text-[10px] text-stone-400 mt-1">ចុចលើមុខម្ហូបដើម្បីបន្ថែមទៅក្នុងការកុម្ម៉ង់របស់អ្នក</p>
             </div>
           ) : (
             Object.values(cart).map((cartItem) => {
@@ -68,7 +68,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <img src={cartItem.image} alt={cartItem.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                     <div className="min-w-0">
                       <div className="font-bold text-stone-800 text-xs truncate">{cartItem.name}</div>
-                      <div className="text-[10px] text-stone-400 font-semibold">{formatPrice(cartItem.unitPrice)} each</div>
+                      <div className="text-[10px] text-stone-400 font-semibold">{formatPrice(cartItem.unitPrice)} / មួយ</div>
                     </div>
                   </div>
 
@@ -108,7 +108,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {/* Bottom fire actions CTA */}
         <div className="pt-3 border-t border-stone-100 space-y-3 shrink-0">
           <div className="flex justify-between items-center text-xs font-black">
-            <span className="text-stone-500 uppercase tracking-wider">Subtotal</span>
+            <span className="text-stone-500 uppercase tracking-wider">សរុបរង</span>
             <span className="text-stone-900 font-extrabold text-sm">{formatPrice(cartTotal)}</span>
           </div>
 
@@ -120,7 +120,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             disabled={Object.keys(cart).length === 0}
             iconRight={<Check className="w-4 h-4" />}
           >
-            Send Order to Kitchen
+            ផ្ញើការកុម្ម៉ង់ទៅចង្ក្រានបាយ
           </Button>
         </div>
 

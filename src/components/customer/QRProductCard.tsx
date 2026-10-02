@@ -43,7 +43,7 @@ export const QRProductCard: React.FC<QRProductCardProps> = ({
         {!item.inStock && (
           <div className="absolute inset-0 bg-stone-900/40 flex items-center justify-center p-1">
             <span className="bg-red-600 text-white font-black text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded shadow-xs text-center leading-tight">
-              Unavailable
+              អស់ពីស្តុក
             </span>
           </div>
         )}
@@ -68,7 +68,7 @@ export const QRProductCard: React.FC<QRProductCardProps> = ({
           <div>
             {!item.inStock ? (
               <span className="text-[9px] font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded-md border border-stone-200/80">
-                Unavailable
+                អស់ពីស្តុក
               </span>
             ) : cartQuantity === 0 ? (
               <Button
@@ -77,7 +77,7 @@ export const QRProductCard: React.FC<QRProductCardProps> = ({
                 size="xs"
                 className="h-7 px-2.5"
               >
-                <span>+ Add</span>
+                <span>+ បន្ថែម</span>
               </Button>
             ) : (
               <div className="flex items-center bg-stone-100 rounded-lg p-0.5 border border-stone-200/80">
