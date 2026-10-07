@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { useSettings } from '../../hooks/useSettings';
 import { Button, Input } from '../../components/ui';
 
 interface LoginProps {
@@ -17,6 +18,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, isAuthenticated } = useAuth();
+  const { settings } = useSettings();
+
+  const shopName = settings.restaurantName || 'Autumn';
+  const logoUrl = settings.logoUrl || 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,12 +69,25 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       {/* Login Card Core Frame */}
       <div id="login-box" className="w-full max-w-[420px] bg-white rounded-3xl p-8 border border-stone-200/60 shadow-xl transition-all">
         
-        {/* Kuro Bistro Branding */}
+        {/* Autumn Branding */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-orange-600 text-white flex items-center justify-center font-extrabold text-xl shadow-md mb-3.5">
-            K
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md mb-3.5 border border-stone-200/80 bg-orange-600 flex items-center justify-center">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={shopName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <span className="text-white font-extrabold text-2xl">
+                {shopName.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
-          <h2 className="text-lg font-bold text-stone-900 leading-tight">Kuro Bistro</h2>
+          <h2 className="text-xl font-bold text-stone-900 leading-tight">{shopName}</h2>
           <p className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-1">RESTOCONTROL TERMINAL</p>
         </div>
 
@@ -83,7 +101,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g. staff@kurobistro.com"
+            placeholder="e.g. panbunhen58@gmail.com"
             icon={<User className="w-4 h-4" />}
             required
           />
@@ -151,8 +169,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
       {/* Gateway Telemetry and stats sub-label footer */}
       <footer className="mt-5 flex flex-col items-center gap-1 text-[10px] text-stone-400 font-bold uppercase tracking-wider text-center">
-        <div className="text-stone-300 font-medium tracking-normal capitalize mt-0.5">
-          © 2026 Kuro Bistro Hospitality Group
+        <div className="text-stone-400 font-medium tracking-normal capitalize mt-0.5">
+          © 2026 {shopName} Hospitality Group
         </div>
       </footer>
 

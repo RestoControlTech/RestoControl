@@ -108,7 +108,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {/* Bottom fire actions CTA */}
         <div className="pt-3 border-t border-stone-100 space-y-3 shrink-0">
           <div className="flex justify-between items-center text-xs font-black">
-            <span className="text-stone-500 uppercase tracking-wider">សរុបរង</span>
+            <span className="text-stone-500 uppercase tracking-wider">សរុបរួម</span>
             <span className="text-stone-900 font-extrabold text-sm">{formatPrice(cartTotal)}</span>
           </div>
 

@@ -15,6 +15,8 @@ interface MockUserEntry {
   user: User;
 }
 
+export const DEFAULT_AVATAR = 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg';
+
 export const MOCK_USERS: MockUserEntry[] = [
   // Primary Admins
   {
@@ -27,6 +29,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Pan Bunheng',
       email: 'panbunhen58@gmail.com',
       role: 'admin',
+      avatar: DEFAULT_AVATAR,
     },
   },
   {
@@ -39,6 +42,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Buma',
       email: 'Buma168@gmail.com',
       role: 'admin',
+      avatar: DEFAULT_AVATAR,
     },
   },
   {
@@ -51,6 +55,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Lymeng',
       email: 'Lymeng111@gmail.com',
       role: 'admin',
+      avatar: DEFAULT_AVATAR,
     },
   },
   // Staff Members
@@ -64,6 +69,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Panhrith',
       email: 'Panhrith233@gmail.com',
       role: 'staff',
+      avatar: DEFAULT_AVATAR,
     },
   },
   {
@@ -76,6 +82,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Dalyna',
       email: 'Dalyna188@gmail.com',
       role: 'staff',
+      avatar: DEFAULT_AVATAR,
     },
   },
   {
@@ -88,6 +95,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Romrom',
       email: 'romromloveyou@gmail.com',
       role: 'staff',
+      avatar: DEFAULT_AVATAR,
     },
   },
   // Legacy / Default demo accounts
@@ -101,6 +109,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Admin User',
       email: 'admin@restaurant.com',
       role: 'admin',
+      avatar: DEFAULT_AVATAR,
     },
   },
   {
@@ -113,6 +122,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Staff Member',
       email: 'staff@restaurant.com',
       role: 'staff',
+      avatar: DEFAULT_AVATAR,
     },
   },
   // Legacy / Quick PIN fallback support for terminal touch keypad
@@ -126,11 +136,12 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Kenji Sato',
       email: 'admin@restaurant.com',
       role: 'admin',
+      avatar: DEFAULT_AVATAR,
     },
   },
   {
     credentials: {
-      email: 'staff@kurobistro.com',
+      email: 'staff@autumn.com',
       password: '4091',
     },
     user: {
@@ -138,6 +149,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       name: 'Kenji Sato',
       email: 'staff@restaurant.com',
       role: 'staff',
+      avatar: DEFAULT_AVATAR,
     },
   },
 ];
@@ -218,6 +230,17 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'restocontrol_auth_session',
       storage: createJSONStorage(getStorage),
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          const state = persistedState as any;
+          if (state?.user && (!state.user.avatar || state.user.avatar === '')) {
+            state.user.avatar = DEFAULT_AVATAR;
+          }
+          return state;
+        }
+        return persistedState;
+      },
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,

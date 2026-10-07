@@ -22,7 +22,7 @@ export interface TablesProps {
   searchQuery: string;
 }
 
-export type TableFilterStatus = 'ALL' | 'Available' | 'Occupied' | 'Reserved';
+export type TableFilterStatus = 'ALL' | 'Available' | 'Busy' | 'Occupied' | 'Reserved';
 
 export default function Tables({
   tables,
@@ -36,18 +36,23 @@ export default function Tables({
   const [statusFilter, setStatusFilter] = useState<TableFilterStatus>('ALL');
 
   const filteredTables = tables.filter((table) => {
-    // 1. Status Filter (Available, Occupied, Reserved - strictly NO 'Online')
-    if (statusFilter !== 'ALL' && table.status !== statusFilter) {
-      return false;
+    // 1. Status Filter (Available, Busy/Occupied, Reserved - strictly NO 'Online')
+    if (statusFilter !== 'ALL') {
+      if (statusFilter === 'Busy' || statusFilter === 'Occupied') {
+        if (table.status !== 'Busy' && table.status !== 'Occupied') return false;
+      } else if (table.status !== statusFilter) {
+        return false;
+      }
     }
 
     // 2. Search Query filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
+      const displayStatus = (table.status === 'Occupied' || table.status === 'Busy') ? 'busy occupied' : table.status.toLowerCase();
       return (
         table.name.toLowerCase().includes(query) ||
         table.section.toLowerCase().includes(query) ||
-        table.status.toLowerCase().includes(query)
+        displayStatus.includes(query)
       );
     }
 
@@ -56,6 +61,7 @@ export default function Tables({
 
   const getStatusBadgeStyle = (status: TableStatus) => {
     switch (status) {
+      case 'Busy':
       case 'Occupied':
         return 'bg-orange-50 border-orange-200 text-orange-600';
       case 'Reserved':
@@ -67,7 +73,7 @@ export default function Tables({
   };
 
   const countAvailable = tables.filter((t) => t.status === 'Available').length;
-  const countOccupied = tables.filter((t) => t.status === 'Occupied').length;
+  const countBusy = tables.filter((t) => t.status === 'Busy' || t.status === 'Occupied').length;
   const countReserved = tables.filter((t) => t.status === 'Reserved').length;
 
   return (
@@ -97,17 +103,17 @@ export default function Tables({
         </div>
       </div>
 
-      {/* Restaurant Table State Filter Bar (Available, Occupied, Reserved) */}
+      {/* Restaurant Table State Filter Bar (Available, Busy, Reserved) */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-        {(['ALL', 'Available', 'Occupied', 'Reserved'] as TableFilterStatus[]).map((tab) => {
+        {(['ALL', 'Available', 'Busy', 'Reserved'] as TableFilterStatus[]).map((tab) => {
           const isActive = statusFilter === tab;
           const count =
             tab === 'ALL'
               ? tables.length
               : tab === 'Available'
               ? countAvailable
-              : tab === 'Occupied'
-              ? countOccupied
+              : tab === 'Busy'
+              ? countBusy
               : countReserved;
 
           return (
@@ -152,6 +158,9 @@ export default function Tables({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {filteredTables.map((table) => {
             const relativeMenuPath = getTableMenuPath(table.id);
+            const isBusy = table.status === 'Busy' || table.status === 'Occupied';
+            const displayBadgeText = isBusy ? 'Busy' : table.status;
+
             return (
               <Card
                 key={table.id}
@@ -175,12 +184,12 @@ export default function Tables({
                   <button
                     type="button"
                     onClick={() => onToggleStatus(table.id)}
-                    title="Click to toggle status (Available / Occupied / Reserved)"
+                    title="Click to toggle status (Available / Busy / Reserved)"
                     className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold border uppercase tracking-wider transition-all active:scale-[0.93] cursor-pointer ${getStatusBadgeStyle(
                       table.status
                     )}`}
                   >
-                    {table.status}
+                    {displayBadgeText}
                   </button>
                 </div>
 

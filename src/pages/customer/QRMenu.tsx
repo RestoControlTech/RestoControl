@@ -203,12 +203,12 @@ export default function QRMenu({
                 />
               ) : (
                 <div className="w-9 h-9 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-                  {settings.restaurantName ? settings.restaurantName.charAt(0).toUpperCase() : 'K'}
+                  {settings.restaurantName ? settings.restaurantName.charAt(0).toUpperCase() : 'A'}
                 </div>
               )}
               <div>
                 <h1 className="font-bold text-stone-900 leading-tight text-xs">
-                  {settings.restaurantName || 'Kuro Bistro'}
+                  {settings.restaurantName || 'Autumn'}
                 </h1>
                 <p className="text-[10px] text-stone-500 font-medium">ភោជនីយដ្ឋាន & អាហារ</p>
               </div>

@@ -74,7 +74,7 @@ export interface CartItem {
   lineTotal: number;
 }
 
-export type TableStatus = 'Available' | 'Occupied' | 'Reserved';
+export type TableStatus = 'Available' | 'Occupied' | 'Busy' | 'Reserved';
 
 export interface Table {
   id: string;

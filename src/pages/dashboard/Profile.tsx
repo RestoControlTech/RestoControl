@@ -37,12 +37,14 @@ export default function Profile() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
 
+  const DEFAULT_PROFILE_AVATAR = 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg';
+
   useEffect(() => {
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
       setPhone(user.phone || '');
-      setAvatar(user.avatar || '');
+      setAvatar(user.avatar || DEFAULT_PROFILE_AVATAR);
       setAvatarPublicId(user.avatarPublicId || undefined);
     }
   }, [user]);

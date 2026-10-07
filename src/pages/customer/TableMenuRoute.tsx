@@ -15,6 +15,7 @@ interface TableMenuRouteProps {
   menuItems: MenuItem[];
   categories: Category[];
   onSendOrderToKitchen: (orderOrCount: QROrderSubmission | number, total?: number) => void;
+  onCustomerEnterTable?: (tableIdOrName: string) => void;
 }
 
 export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
@@ -22,6 +23,7 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
   menuItems,
   categories,
   onSendOrderToKitchen,
+  onCustomerEnterTable,
 }) => {
   const { tableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
@@ -34,6 +36,13 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
     const cleanSearch = cleanId.replace(/[\s-_]+/g, '');
     return tId === cleanId || tSlug === cleanSearch;
   });
+
+  // Automatically mark table as Busy when a customer accesses the table menu
+  React.useEffect(() => {
+    if (matchedTable && matchedTable.status === 'Available') {
+      onCustomerEnterTable?.(matchedTable.id);
+    }
+  }, [matchedTable?.id, matchedTable?.status, onCustomerEnterTable]);
 
   if (!matchedTable) {
     return (

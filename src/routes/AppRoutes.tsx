@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { MenuItem, Category, Table, StaffMember, Transaction, Order, Product } from '../types';
+import { MenuItem, Category, Table, TableStatus, StaffMember, Transaction, Order, Product } from '../types';
 
 // Auth and Route Protection
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
@@ -51,7 +51,39 @@ export interface AppRoutesProps {
   orders?: Order[];
   onUpdateOrders?: React.Dispatch<React.SetStateAction<Order[]>>;
   onOrderCreate?: (order: Order) => void;
+  onCustomerEnterTable?: (tableIdOrName: string) => void;
+  onSetTableStatus?: (tableId: string, status: TableStatus) => void;
 }
+
+const CustomerRouteWrapper: React.FC<{
+  menuItems: MenuItem[];
+  categories: Category[];
+  tableName: string;
+  tables: Table[];
+  onSendOrderToKitchen: (orderOrCount: import('../pages/customer/QRMenu').QROrderSubmission | number, total?: number) => void;
+  onCustomerEnterTable?: (tableIdOrName: string) => void;
+}> = ({ menuItems, categories, tableName, tables, onSendOrderToKitchen, onCustomerEnterTable }) => {
+  React.useEffect(() => {
+    const matched = tables.find((t) => t.name === tableName || t.id === tableName);
+    if (matched && matched.status === 'Available') {
+      onCustomerEnterTable?.(matched.id);
+    }
+  }, [tableName, tables, onCustomerEnterTable]);
+
+  const matchedId = tables.find((t) => t.name === tableName || t.id === tableName)?.id;
+
+  return (
+    <div id="client-app-root" className="relative">
+      <QRMenu
+        initialMenuItems={menuItems}
+        categories={categories}
+        tableName={tableName}
+        tableId={matchedId}
+        onSendOrderToKitchen={onSendOrderToKitchen}
+      />
+    </div>
+  );
+};
 
 export const AppRoutes: React.FC<AppRoutesProps> = ({
   searchQuery,
@@ -80,6 +112,8 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
   orders,
   onUpdateOrders,
   onOrderCreate,
+  onCustomerEnterTable,
+  onSetTableStatus,
 }) => {
   const navigate = useNavigate();
 
@@ -110,14 +144,14 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
       <Route
         path="/customer"
         element={
-          <div id="client-app-root" className="relative">
-            <QRMenu
-              initialMenuItems={menuItems}
-              categories={categories}
-              tableName={activeTableQRName}
-              onSendOrderToKitchen={onSendOrderToKitchen}
-            />
-          </div>
+          <CustomerRouteWrapper
+            menuItems={menuItems}
+            categories={categories}
+            tableName={activeTableQRName}
+            tables={tables}
+            onSendOrderToKitchen={onSendOrderToKitchen}
+            onCustomerEnterTable={onCustomerEnterTable}
+          />
         }
       />
       <Route path="/qr" element={<Navigate to="/customer" replace />} />
@@ -129,6 +163,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
             menuItems={menuItems}
             categories={categories}
             onSendOrderToKitchen={onSendOrderToKitchen}
+            onCustomerEnterTable={onCustomerEnterTable}
           />
         }
       />

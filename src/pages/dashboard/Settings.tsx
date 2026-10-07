@@ -159,7 +159,7 @@ export default function Settings() {
                   setRestaurantName(e.target.value);
                   if (nameError) setNameError(null);
                 }}
-                placeholder="e.g. Kuro Bistro"
+                placeholder="e.g. Autumn"
                 error={nameError || undefined}
                 required
               />

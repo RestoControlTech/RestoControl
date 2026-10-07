@@ -104,6 +104,8 @@ export default function DashboardLayout({
 
   const unhandledOrdersCount = notifications.filter((n) => !n.handled).length;
 
+  const fallbackAvatar = settings.logoUrl || 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg';
+
   const currentUser = authUser
     ? {
         id: authUser.id,
@@ -112,11 +114,11 @@ export default function DashboardLayout({
         phone: authUser.phone,
         role: authUser.role === 'admin' ? 'Administrator' : 'Staff Member',
         rawRole: authUser.role,
-        avatar: authUser.avatar,
+        avatar: authUser.avatar || fallbackAvatar,
       }
     : propUser
-    ? { id: 'usr-guest', name: propUser.name, email: '', phone: '', role: propUser.role, rawRole: 'staff', avatar: undefined }
-    : { id: 'usr-guest', name: 'Staff User', email: '', phone: '', role: 'Staff', rawRole: 'staff', avatar: undefined };
+    ? { id: 'usr-guest', name: propUser.name, email: '', phone: '', role: propUser.role, rawRole: 'staff', avatar: fallbackAvatar }
+    : { id: 'usr-guest', name: 'Staff User', email: '', phone: '', role: 'Staff', rawRole: 'staff', avatar: fallbackAvatar };
 
   // Filter navigation items based on centralized permission authorization
   const visibleNavItems = SIDEBAR_NAV_ITEMS.filter((item) =>

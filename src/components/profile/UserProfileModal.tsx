@@ -50,7 +50,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       setName(user.name || '');
       setEmail(user.email || '');
       setPhone(user.phone || '');
-      setAvatar(user.avatar || '');
+      setAvatar(user.avatar || 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg');
       setAvatarPublicId(user.avatarPublicId || undefined);
       setErrors({});
       setSaveSuccess(false);

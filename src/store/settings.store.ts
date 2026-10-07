@@ -17,9 +17,9 @@ export interface RestaurantSettings {
 }
 
 export const DEFAULT_SETTINGS: RestaurantSettings = {
-  restaurantName: 'Kuro Bistro',
+  restaurantName: 'Autumn',
   phoneNumber: '+855 23 987 654',
-  logoUrl: '',
+  logoUrl: 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg',
   language: 'en',
   address: 'Phnom Penh, Cambodia',
   openingHours: '11:00 AM - 10:30 PM',
@@ -70,6 +70,24 @@ export const useSettingsStore = create<SettingsStoreState>()(
     {
       name: 'restocontrol_settings',
       storage: createJSONStorage(getStorage),
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          const state = persistedState as SettingsStoreState;
+          const currentName = state?.settings?.restaurantName;
+          const currentLogo = state?.settings?.logoUrl;
+          return {
+            ...state,
+            settings: {
+              ...DEFAULT_SETTINGS,
+              ...state?.settings,
+              restaurantName: (!currentName || currentName === 'Kuro Bistro') ? 'Autumn' : currentName,
+              logoUrl: (!currentLogo || currentLogo === '') ? 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg' : currentLogo,
+            },
+          };
+        }
+        return persistedState as SettingsStoreState;
+      },
     }
   )
 );

@@ -18,8 +18,8 @@ console.log('--- Running Settings Improvement & Regression Test Suite ---');
 console.log('Testing Restaurant Name persistence...');
 useSettingsStore.getState().resetSettings();
 assert(
-  useSettingsStore.getState().settings.restaurantName === 'Kuro Bistro',
-  'Default restaurant name should be Kuro Bistro'
+  useSettingsStore.getState().settings.restaurantName === 'Autumn',
+  'Default restaurant name should be Autumn'
 );
 
 // Update restaurant name

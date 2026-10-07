@@ -19,6 +19,7 @@ export interface SaleReceiptModalProps {
     phone?: string;
     address?: string;
     logoText?: string;
+    logoUrl?: string;
   };
 }
 
@@ -32,10 +33,11 @@ export const SaleReceiptModal: React.FC<SaleReceiptModalProps> = ({
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   const info = {
-    name: restaurantInfo?.name || settings.restaurantName || 'Kuro Bistro',
+    name: restaurantInfo?.name || settings.restaurantName || 'Autumn',
     phone: restaurantInfo?.phone || settings.phoneNumber || '+855 23 987 654',
     address: restaurantInfo?.address || settings.address || 'Phnom Penh, Cambodia',
-    logoText: restaurantInfo?.logoText || (settings.restaurantName ? settings.restaurantName.charAt(0).toUpperCase() : 'K'),
+    logoText: restaurantInfo?.logoText || (settings.restaurantName ? settings.restaurantName.charAt(0).toUpperCase() : 'A'),
+    logoUrl: restaurantInfo?.logoUrl || settings.logoUrl || 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg',
   };
 
   if (!sale) return null;
@@ -95,11 +97,22 @@ export const SaleReceiptModal: React.FC<SaleReceiptModalProps> = ({
             {/* 1. Restaurant / Business Branding Header */}
             <div className="text-center pb-3 border-b border-dashed border-slate-300 space-y-1">
               {/* Logo / Monogram */}
-              <div className="w-10 h-10 rounded-xl bg-orange-600 text-white font-black text-xl flex items-center justify-center mx-auto mb-1.5 shadow-xs">
-                {info.logoText || 'K'}
-              </div>
+              {info.logoUrl ? (
+                <img
+                  src={info.logoUrl}
+                  alt={info.name}
+                  className="w-11 h-11 rounded-xl object-cover border border-slate-200 shadow-2xs mx-auto mb-1.5"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-orange-600 text-white font-black text-xl flex items-center justify-center mx-auto mb-1.5 shadow-xs">
+                  {info.logoText || 'A'}
+                </div>
+              )}
               <h3 className="font-black text-base tracking-tight text-slate-900 font-sans">
-                {info.name || 'Kuro Bistro'}
+                {info.name || 'Autumn'}
               </h3>
               <p className="text-[10px] text-slate-500 font-medium">
                 {info.address}

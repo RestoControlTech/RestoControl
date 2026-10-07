@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
-import { MenuItem, Category, Table, StaffMember, Transaction, Order, OrderItem } from './types';
+import { MenuItem, Category, Table, TableStatus, StaffMember, Transaction, Order, OrderItem } from './types';
 import { MENU_ITEMS, STAFF_DATA } from './data/mockData';
 import { AppRoutes } from './routes';
 import { useOrderNotificationStore } from './store/orderNotification.store';
@@ -66,13 +66,13 @@ function AppContent() {
       return [newOrder, ...prev];
     });
 
-    // Update table status: If paid, mark Available; if unpaid, mark Occupied
+    // Update table status: If paid, mark Available; if unpaid, mark Busy
     setTables((prev) =>
       prev.map((t) => {
         if (t.name === newOrder.table || (newOrder.tableId && t.id === newOrder.tableId)) {
           return {
             ...t,
-            status: isPaid ? 'Available' : 'Occupied',
+            status: isPaid ? 'Available' : 'Busy',
           };
         }
         return t;
@@ -175,9 +175,38 @@ function AppContent() {
   const handleToggleTableStatus = (tableId: string) => {
     setTables(prev => prev.map(t => {
       if (t.id !== tableId) return t;
-      const nextStatus = t.status === 'Available' ? 'Occupied' : t.status === 'Occupied' ? 'Reserved' : 'Available';
+      const isBusy = t.status === 'Busy' || t.status === 'Occupied';
+      const nextStatus: TableStatus = t.status === 'Available' ? 'Busy' : isBusy ? 'Reserved' : 'Available';
       return { ...t, status: nextStatus };
     }));
+  };
+
+  const handleSetTableStatus = (tableIdOrName: string, status: TableStatus) => {
+    setTables(prev =>
+      prev.map(t => {
+        const cleanTarget = tableIdOrName.trim().toLowerCase().replace(/[\s-_]+/g, '');
+        const tId = t.id.toLowerCase().replace(/[\s-_]+/g, '');
+        const tName = t.name.toLowerCase().replace(/[\s-_]+/g, '');
+        if (tId === cleanTarget || tName === cleanTarget) {
+          return { ...t, status };
+        }
+        return t;
+      })
+    );
+  };
+
+  const handleCustomerEnterTable = (tableIdOrName: string) => {
+    setTables(prev =>
+      prev.map(t => {
+        const cleanTarget = tableIdOrName.trim().toLowerCase().replace(/[\s-_]+/g, '');
+        const tId = t.id.toLowerCase().replace(/[\s-_]+/g, '');
+        const tName = t.name.toLowerCase().replace(/[\s-_]+/g, '');
+        if ((tId === cleanTarget || tName === cleanTarget) && t.status === 'Available') {
+          return { ...t, status: 'Busy' };
+        }
+        return t;
+      })
+    );
   };
 
   const handleAddTable = (newTableData: { name: string; section: string; seats: number }) => {
@@ -232,9 +261,13 @@ function AppContent() {
     );
     if (table) {
       setActiveTableQRName(table.name);
+      if (table.status === 'Available') {
+        handleCustomerEnterTable(table.id);
+      }
       navigate(`/menu/${table.id}`);
     } else {
       setActiveTableQRName(tableIdentifier);
+      handleCustomerEnterTable(tableIdentifier);
       navigate('/customer');
     }
   };
@@ -274,38 +307,100 @@ function AppContent() {
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const orderNum = `#ORD-${1000 + orders.length + 1}`;
-
     const targetTableId = typeof orderOrCount === 'object' ? orderOrCount.tableId : undefined;
 
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      orderNumber: orderNum,
-      table: tableName,
-      tableId: targetTableId,
-      source: 'QR',
-      customer: `QR Guest (${tableName})`,
-      orderType: 'Dine In',
-      items: orderItems,
-      total,
-      paymentStatus: 'UNPAID',
-      status: 'NEW',
-      dateTime: `Today, ${timeStr}`,
-      note: 'Customer QR Order',
-    };
+    setOrders((prev) => {
+      // Find active unpaid order for this table (case-insensitive name or ID)
+      const cleanTargetTable = tableName.trim().toLowerCase().replace(/[\s-_]+/g, '');
+      const existingIdx = prev.findIndex(
+        (o) => {
+          const oTableClean = o.table.trim().toLowerCase().replace(/[\s-_]+/g, '');
+          const isSameTable =
+            oTableClean === cleanTargetTable ||
+            (targetTableId && o.tableId && o.tableId.toLowerCase() === targetTableId.toLowerCase());
+          const isUnpaid = o.paymentStatus === 'UNPAID' || o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Pending';
+          return isSameTable && isUnpaid && o.status !== 'Cancelled';
+        }
+      );
 
-    setOrders((prev) => [newOrder, ...prev]);
+      if (existingIdx > -1) {
+        // Table already has an active unpaid bill: Merge new items into existing order
+        const existingOrder = prev[existingIdx];
+        const mergedItems: OrderItem[] = [...existingOrder.items];
 
-    // Dispatch real application-level notification
-    useOrderNotificationStore.getState().notifyNewOrder(newOrder);
+        for (const newItem of orderItems) {
+          const itemIdx = mergedItems.findIndex(
+            (i) => i.id === newItem.id || i.name.trim().toLowerCase() === newItem.name.trim().toLowerCase()
+          );
+          if (itemIdx > -1) {
+            const currentItem = mergedItems[itemIdx];
+            const updatedQty = currentItem.quantity + newItem.quantity;
+            mergedItems[itemIdx] = {
+              ...currentItem,
+              quantity: updatedQty,
+              lineTotal: currentItem.unitPrice * updatedQty,
+            };
+          } else {
+            mergedItems.push(newItem);
+          }
+        }
 
-    // Update active table status to Occupied
+        const newTotal = mergedItems.reduce((sum, item) => sum + item.lineTotal, 0);
+
+        const updatedOrder: Order = {
+          ...existingOrder,
+          items: mergedItems,
+          total: newTotal,
+          status: 'NEW', // reset to NEW so kitchen knows new items arrived to prepare
+          dateTime: `Today, ${timeStr}`,
+        };
+
+        const updatedList = [...prev];
+        updatedList[existingIdx] = updatedOrder;
+
+        // Dispatch real application-level notification with added items
+        useOrderNotificationStore.getState().notifyNewOrder({
+          ...updatedOrder,
+          items: orderItems,
+          total: total,
+        });
+
+        return updatedList;
+      }
+
+      // No active unpaid order for this table: Create brand new bill
+      const orderNum = `#ORD-${1000 + prev.length + 1}`;
+      const newOrder: Order = {
+        id: `ord-${Date.now()}`,
+        orderNumber: orderNum,
+        table: tableName,
+        tableId: targetTableId,
+        source: 'QR',
+        customer: `QR Guest (${tableName})`,
+        orderType: 'Dine In',
+        items: orderItems,
+        total,
+        paymentStatus: 'UNPAID',
+        status: 'NEW',
+        dateTime: `Today, ${timeStr}`,
+        note: 'Customer QR Order',
+      };
+
+      // Dispatch real application-level notification
+      useOrderNotificationStore.getState().notifyNewOrder(newOrder);
+
+      return [newOrder, ...prev];
+    });
+
+    // Update active table status to Busy
     setTables((prev) =>
-      prev.map((t) =>
-        t.name === tableName || (targetTableId && t.id === targetTableId)
-          ? { ...t, status: 'Occupied' }
-          : t
-      )
+      prev.map((t) => {
+        const cleanTable = tableName.trim().toLowerCase().replace(/[\s-_]+/g, '');
+        const isMatch =
+          t.name.trim().toLowerCase().replace(/[\s-_]+/g, '') === cleanTable ||
+          (targetTableId && t.id.toLowerCase() === targetTableId.toLowerCase());
+        return isMatch ? { ...t, status: 'Busy' } : t;
+      })
     );
   };
 
@@ -337,6 +432,8 @@ function AppContent() {
       orders={orders}
       onUpdateOrders={setOrders}
       onOrderCreate={handleOrderCreate}
+      onCustomerEnterTable={handleCustomerEnterTable}
+      onSetTableStatus={handleSetTableStatus}
     />
   );
 }

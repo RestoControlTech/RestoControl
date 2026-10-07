@@ -20,7 +20,7 @@ export const PRODUCTS: Product[] = [
     jpName: '豚骨ラーメン',
     category: 'Noodles',
     price: 13.50,
-    image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&auto=format&fit=crop&q=80',
+    image: 'https://king-mart.shop:3010/media/file/crm/uploadfile/17288708064b7ff23731cdf370c924658d6cc5b6548.jpg',
     description: 'Rich pork broth, tender chashu pork belly, soft-boiled ajitama egg, scallions, 16hr simmer.',
     available: true,
     popular: true,
