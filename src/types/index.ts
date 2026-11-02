@@ -83,6 +83,15 @@ export interface Table {
   seats: number;
   status: TableStatus;
   qrCodeUrl: string;
+  isActive?: boolean;
+  lastActivity?: number | string | null;
+  totalAmount?: number;
+}
+
+export interface TableActivity {
+  tableId: string;
+  isActive: boolean;
+  lastActivity: number | string | null;
 }
 
 export interface StaffMember {

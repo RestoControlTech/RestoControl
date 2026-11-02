@@ -13,28 +13,30 @@ export type PaymentCurrency = 'USD' | 'KHR';
 /**
  * Format a number as currency based on the currency code (USD or KHR)
  */
-export function formatPrice(price: number, currency: string = 'USD'): string {
+export function formatPrice(price: number | undefined | null, currency: string = 'USD'): string {
+  const num = typeof price === 'number' && !isNaN(price) ? price : (Number(price) || 0);
   if (currency === 'KHR') {
-    const isNegative = price < 0;
-    const absVal = Math.round(Math.abs(price)).toLocaleString('en-US');
+    const isNegative = num < 0;
+    const absVal = Math.round(Math.abs(num)).toLocaleString('en-US');
     return isNegative ? `-${absVal} ៛` : `${absVal} ៛`;
   }
 
   // Default USD ($XX.XX)
-  if (price < 0) {
-    return `-$${Math.abs(price).toFixed(2)}`;
+  if (num < 0) {
+    return `-$${Math.abs(num).toFixed(2)}`;
   }
-  return `$${price.toFixed(2)}`;
+  return `$${num.toFixed(2)}`;
 }
 
 /**
  * Format a number as Cambodian Riel currency (៛XX,XXX)
  */
-export function formatKHR(amount: number): string {
-  if (amount < 0) {
-    return `-៛${Math.round(Math.abs(amount)).toLocaleString('en-US')}`;
+export function formatKHR(amount: number | undefined | null): string {
+  const num = typeof amount === 'number' && !isNaN(amount) ? amount : (Number(amount) || 0);
+  if (num < 0) {
+    return `-៛${Math.round(Math.abs(num)).toLocaleString('en-US')}`;
   }
-  return `៛${Math.round(amount).toLocaleString('en-US')}`;
+  return `៛${Math.round(num).toLocaleString('en-US')}`;
 }
 
 /**

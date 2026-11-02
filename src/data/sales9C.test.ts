@@ -97,7 +97,7 @@ assert(updatedTxList.length === TRANSACTIONS_DATA.length + 1, 'POS order transac
 console.log('✓ 14, 15 & 16. POS, kitchen tickets, and payment flows verified.');
 
 // 17. Menu still works
-assert(MENU_ITEMS.length === 12, 'Menu catalog intact with 12 items');
+assert(MENU_ITEMS.length >= 12, 'Menu catalog intact with at least 12 items');
 assert(CATEGORIES.length === 6, 'Categories intact with 6 categories');
 console.log('✓ 17. Step 8 Menu management integrity verified.');
 

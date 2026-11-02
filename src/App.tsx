@@ -3,23 +3,24 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, useNavigate } from 'react-router-dom';
-import { MenuItem, Category, Table, TableStatus, StaffMember, Transaction, Order, OrderItem } from './types';
+import { MenuItem, Category, Table, TableStatus, StaffMember, Transaction, Order, OrderItem, PaymentConfirmation } from './types';
 import { MENU_ITEMS, STAFF_DATA } from './data/mockData';
 import { AppRoutes } from './routes';
 import { useOrderNotificationStore } from './store/orderNotification.store';
+import { tableSync } from './services/tableSync';
 
 // Base initial layout for restaurant tables
 const INITIAL_TABLES: Table[] = [
-  { id: 't1', name: 'Table 01', section: 'Main Dining', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t1' },
-  { id: 't2', name: 'Table 02', section: 'Main Dining', seats: 2, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t2' },
-  { id: 't3', name: 'Table 03', section: 'Main Dining', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t3' },
-  { id: 't4', name: 'Table 04', section: 'Main Dining', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t4' },
-  { id: 't5', name: 'Table 05', section: 'Indoor Booths', seats: 6, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t5' },
-  { id: 't6', name: 'Table 06', section: 'Indoor Booths', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t6' },
-  { id: 't7', name: 'Table 07', section: 'Outdoor Terrace', seats: 2, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t7' },
-  { id: 't8', name: 'Table 08', section: 'Outdoor Terrace', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t8' },
+  { id: 't1', name: 'Table 01', section: 'Main Dining', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t1', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't2', name: 'Table 02', section: 'Main Dining', seats: 2, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t2', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't3', name: 'Table 03', section: 'Main Dining', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t3', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't4', name: 'Table 04', section: 'Main Dining', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t4', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't5', name: 'Table 05', section: 'Indoor Booths', seats: 6, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t5', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't6', name: 'Table 06', section: 'Indoor Booths', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t6', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't7', name: 'Table 07', section: 'Outdoor Terrace', seats: 2, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t7', isActive: false, lastActivity: null, totalAmount: 0 },
+  { id: 't8', name: 'Table 08', section: 'Outdoor Terrace', seats: 4, status: 'Available', qrCodeUrl: 'restocontrol.menu/menu/t8', isActive: false, lastActivity: null, totalAmount: 0 },
 ];
 
 const INITIAL_CATEGORIES: Category[] = [
@@ -42,8 +43,141 @@ function AppContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
 
+  // Synchronize state with shared backend every 3.5 seconds
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncWithBackend = async () => {
+      try {
+        const [backendTables, backendOrders] = await Promise.all([
+          tableSync.fetchTables(),
+          tableSync.fetchOrders(),
+        ]);
+
+        if (!isMounted) return;
+
+        if (backendTables && backendTables.length > 0) {
+          setTables((prev) =>
+            prev.map((t) => {
+              const bt = backendTables.find(
+                (b) => b.id.toLowerCase() === t.id.toLowerCase() || b.name.toLowerCase() === t.name.toLowerCase()
+              );
+              if (!bt) return t;
+              return {
+                ...t,
+                status: bt.status,
+                isActive: bt.isActive,
+                lastActivity: bt.lastActivity,
+                totalAmount: bt.totalAmount ?? 0,
+              };
+            })
+          );
+        }
+
+        if (backendOrders) {
+          setOrders(backendOrders);
+        }
+      } catch (err) {
+        // Fallback gracefully in offline / test environments
+      }
+    };
+
+    // Initial sync
+    syncWithBackend();
+
+    const interval = setInterval(syncWithBackend, 3500);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Admin Workflow: Staff receives payment for all outstanding orders on a table
+  const handlePayTable = async (tableIdOrName: string, paymentInfo?: Partial<PaymentConfirmation>) => {
+    const table = tables.find(
+      (t) => t.id.toLowerCase() === tableIdOrName.toLowerCase() || t.name.toLowerCase() === tableIdOrName.toLowerCase()
+    );
+    const targetTableId = table?.id || tableIdOrName;
+    const targetTableName = table?.name || tableIdOrName;
+
+    // 1. Backend shared database payment transaction
+    try {
+      const res = await tableSync.payTableOrders(targetTableId, paymentInfo);
+      if (res && res.transaction) {
+        setTransactions((prev) => [res.transaction!, ...prev]);
+      }
+    } catch (err) {
+      console.warn('[handlePayTable] backend payment sync error:', err);
+    }
+
+    // 2. Mark associated orders as PAID in client state
+    const cleanTarget = targetTableName.trim().toLowerCase().replace(/[\s-_]+/g, '');
+    const cleanId = targetTableId.toLowerCase().replace(/[\s-_]+/g, '');
+
+    setOrders((prev) =>
+      prev.map((o) => {
+        const oTableClean = o.table.trim().toLowerCase().replace(/[\s-_]+/g, '');
+        const oIdClean = (o.tableId || '').toLowerCase().replace(/[\s-_]+/g, '');
+        const isMatch = oTableClean === cleanTarget || (oIdClean && oIdClean === cleanId);
+        if (isMatch && (o.paymentStatus === 'UNPAID' || o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Pending')) {
+          return {
+            ...o,
+            paymentStatus: 'PAID',
+            status: o.status === 'Draft' || o.status === 'NEW' ? 'READY' : o.status,
+          };
+        }
+        return o;
+      })
+    );
+
+    // 3. Clear table activity, reset table card to white (Available), reset outstanding amount to 0
+    setTables((prev) =>
+      prev.map((t) => {
+        const tClean = t.name.trim().toLowerCase().replace(/[\s-_]+/g, '');
+        const tIdClean = t.id.toLowerCase().replace(/[\s-_]+/g, '');
+        if (tClean === cleanTarget || tIdClean === cleanId) {
+          return {
+            ...t,
+            status: 'Available',
+            isActive: false,
+            lastActivity: null,
+            totalAmount: 0,
+          };
+        }
+        return t;
+      })
+    );
+  };
+
+  // Staff clears table activity
+  const handleClearTable = async (tableIdOrName: string) => {
+    try {
+      await tableSync.clearTableActivity(tableIdOrName);
+    } catch (err) {
+      console.warn('[handleClearTable] offline:', err);
+    }
+
+    const cleanTarget = tableIdOrName.trim().toLowerCase().replace(/[\s-_]+/g, '');
+    setTables((prev) =>
+      prev.map((t) => {
+        const tClean = t.name.trim().toLowerCase().replace(/[\s-_]+/g, '');
+        const tIdClean = t.id.toLowerCase().replace(/[\s-_]+/g, '');
+        if (tClean === cleanTarget || tIdClean === cleanTarget) {
+          return {
+            ...t,
+            status: 'Available',
+            isActive: false,
+            lastActivity: null,
+            totalAmount: 0,
+          };
+        }
+        return t;
+      })
+    );
+  };
+
   // Handle creating or completing payment on an order from POS
-  const handleOrderCreate = (newOrder: Order, paymentInfo?: import('./types').PaymentConfirmation) => {
+  const handleOrderCreate = (newOrder: Order, paymentInfo?: PaymentConfirmation) => {
     const isPaid = newOrder.paymentStatus === 'PAID' || newOrder.paymentStatus === 'Paid';
 
     setOrders((prev) => {
@@ -66,21 +200,12 @@ function AppContent() {
       return [newOrder, ...prev];
     });
 
-    // Update table status: If paid, mark Available; if unpaid, mark Busy
-    setTables((prev) =>
-      prev.map((t) => {
-        if (t.name === newOrder.table || (newOrder.tableId && t.id === newOrder.tableId)) {
-          return {
-            ...t,
-            status: isPaid ? 'Available' : 'Busy',
-          };
-        }
-        return t;
-      })
-    );
-
-    // Create sales transaction record (only once per orderNumber)
     if (isPaid) {
+      // Settle table on shared backend
+      const tableIdentifier = newOrder.tableId || newOrder.table;
+      handlePayTable(tableIdentifier, paymentInfo);
+
+      // Create sales transaction record (only once per orderNumber)
       setTransactions((prev) => {
         const txExists = prev.some((t) => t.orderNumber === newOrder.orderNumber);
         if (txExists) return prev;
@@ -97,8 +222,8 @@ function AppContent() {
             paymentInfo?.method === 'card'
               ? 'Credit Card'
               : paymentInfo?.method === 'cash'
-                ? 'Cash'
-                : (paymentInfo?.method as any) || 'Cash',
+              ? 'Cash'
+              : (paymentInfo?.method as any) || 'Cash',
           cashReceived: paymentInfo?.cashReceived,
           change: paymentInfo?.change,
           amountPaid: paymentInfo?.cashReceived || newOrder.total,
@@ -111,6 +236,23 @@ function AppContent() {
         };
         return [newTx, ...prev];
       });
+    } else {
+      // Mark table Busy & update total
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.name === newOrder.table || (newOrder.tableId && t.id === newOrder.tableId)) {
+            const currentTotal = t.totalAmount || 0;
+            return {
+              ...t,
+              status: 'Busy',
+              isActive: true,
+              lastActivity: Date.now(),
+              totalAmount: currentTotal + newOrder.total,
+            };
+          }
+          return t;
+        })
+      );
     }
   };
 
@@ -122,73 +264,86 @@ function AppContent() {
 
   // Global Actions (synchronizes POS and Customer QR view actions)
   const handleToggleStock = (itemId: string) => {
-    setMenuItems(prev => prev.map(item =>
-      item.id === itemId ? { ...item, inStock: !item.inStock } : item
-    ));
+    setMenuItems((prev) =>
+      prev.map((item) => (item.id === itemId ? { ...item, inStock: !item.inStock } : item))
+    );
   };
 
   const handleAddItem = (newItem: MenuItem) => {
-    setMenuItems(prev => [newItem, ...prev]);
+    setMenuItems((prev) => [newItem, ...prev]);
   };
 
   const handleEditItem = (updatedItem: MenuItem) => {
-    setMenuItems(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    setMenuItems((prev) => (prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))));
   };
 
   const handleDeleteItem = (itemId: string) => {
-    setMenuItems(prev => prev.filter(item => item.id !== itemId));
+    setMenuItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
   const handleAddCategory = (newCategory: Category) => {
-    setCategories(prev => [...prev, newCategory]);
+    setCategories((prev) => [...prev, newCategory]);
   };
 
   const handleEditCategory = (updatedCategory: Category) => {
-    setCategories(prev => prev.map(c => c.id === updatedCategory.id ? updatedCategory : c));
+    setCategories((prev) => (prev.map((c) => (c.id === updatedCategory.id ? updatedCategory : c))));
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    setCategories(prev => prev.filter(c => c.id !== categoryId));
+    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
   };
 
   const handleToggleStaffShift = (staffId: string) => {
-    setStaffList(prev => prev.map(s =>
-      s.id === staffId ? { ...s, status: s.status === 'Active' ? 'Off Duty' : 'Active' } : s
-    ));
+    setStaffList((prev) =>
+      prev.map((s) => (s.id === staffId ? { ...s, status: s.status === 'Active' ? 'Off Duty' : 'Active' } : s))
+    );
   };
 
   const handleAddStaff = (newStaff: StaffMember) => {
-    setStaffList(prev => [...prev, newStaff]);
+    setStaffList((prev) => [...prev, newStaff]);
   };
 
   const handleEditStaff = (updatedStaff: StaffMember) => {
-    setStaffList(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+    setStaffList((prev) => (prev.map((s) => (s.id === updatedStaff.id ? updatedStaff : s))));
   };
 
   const handleRefundSale = (refundTx: Transaction, updatedSale: Transaction) => {
-    setTransactions(prev => {
-      const filtered = prev.filter(t => t.id !== updatedSale.id);
+    setTransactions((prev) => {
+      const filtered = prev.filter((t) => t.id !== updatedSale.id);
       return [refundTx, updatedSale, ...filtered];
     });
   };
 
   const handleToggleTableStatus = (tableId: string) => {
-    setTables(prev => prev.map(t => {
-      if (t.id !== tableId) return t;
-      const isBusy = t.status === 'Busy' || t.status === 'Occupied';
-      const nextStatus: TableStatus = t.status === 'Available' ? 'Busy' : isBusy ? 'Reserved' : 'Available';
-      return { ...t, status: nextStatus };
-    }));
+    tableSync.toggleTableStatus(tableId).catch(() => {});
+    setTables((prev) =>
+      prev.map((t) => {
+        if (t.id !== tableId) return t;
+        const isBusy = t.status === 'Busy' || t.status === 'Occupied';
+        const nextStatus: TableStatus = t.status === 'Available' ? 'Busy' : isBusy ? 'Reserved' : 'Available';
+        return {
+          ...t,
+          status: nextStatus,
+          isActive: nextStatus === 'Busy',
+          lastActivity: nextStatus === 'Busy' ? Date.now() : t.lastActivity,
+        };
+      })
+    );
   };
 
   const handleSetTableStatus = (tableIdOrName: string, status: TableStatus) => {
-    setTables(prev =>
-      prev.map(t => {
+    setTables((prev) =>
+      prev.map((t) => {
         const cleanTarget = tableIdOrName.trim().toLowerCase().replace(/[\s-_]+/g, '');
         const tId = t.id.toLowerCase().replace(/[\s-_]+/g, '');
         const tName = t.name.toLowerCase().replace(/[\s-_]+/g, '');
         if (tId === cleanTarget || tName === cleanTarget) {
-          return { ...t, status };
+          return {
+            ...t,
+            status,
+            isActive: status === 'Busy' || status === 'Occupied',
+            lastActivity: status === 'Busy' || status === 'Occupied' ? Date.now() : t.lastActivity,
+          };
         }
         return t;
       })
@@ -196,13 +351,19 @@ function AppContent() {
   };
 
   const handleCustomerEnterTable = (tableIdOrName: string) => {
-    setTables(prev =>
-      prev.map(t => {
+    tableSync.recordTableActivity(tableIdOrName).catch(() => {});
+    setTables((prev) =>
+      prev.map((t) => {
         const cleanTarget = tableIdOrName.trim().toLowerCase().replace(/[\s-_]+/g, '');
         const tId = t.id.toLowerCase().replace(/[\s-_]+/g, '');
         const tName = t.name.toLowerCase().replace(/[\s-_]+/g, '');
         if ((tId === cleanTarget || tName === cleanTarget) && t.status === 'Available') {
-          return { ...t, status: 'Busy' };
+          return {
+            ...t,
+            status: 'Busy',
+            isActive: true,
+            lastActivity: Date.now(),
+          };
         }
         return t;
       })
@@ -248,6 +409,9 @@ function AppContent() {
       seats: Number(newTableData.seats) || 4,
       status: 'Available',
       qrCodeUrl: `restocontrol.menu/menu/${candidateId}`,
+      isActive: false,
+      lastActivity: null,
+      totalAmount: 0,
     };
 
     setTables((prev) => [...prev, newTable]);
@@ -257,7 +421,7 @@ function AppContent() {
   // Switch to customer QR menu directly for a chosen table
   const handleViewMenuFromPOS = (tableIdentifier: string) => {
     const table = tables.find(
-      t => t.name === tableIdentifier || t.id === tableIdentifier
+      (t) => t.name === tableIdentifier || t.id === tableIdentifier
     );
     if (table) {
       setActiveTableQRName(table.name);
@@ -272,6 +436,7 @@ function AppContent() {
     }
   };
 
+  // Customer QR Order Submission: Separate order is created for each submission
   const handleSendOrderToKitchen = (
     orderOrCount: import('./pages/customer/QRMenu').QROrderSubmission | number,
     fallbackTotal?: number
@@ -308,100 +473,56 @@ function AppContent() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const targetTableId = typeof orderOrCount === 'object' ? orderOrCount.tableId : undefined;
+    const cleanTable = tableName.trim().toLowerCase().replace(/[\s-_]+/g, '');
 
-    setOrders((prev) => {
-      // Find active unpaid order for this table (case-insensitive name or ID)
-      const cleanTargetTable = tableName.trim().toLowerCase().replace(/[\s-_]+/g, '');
-      const existingIdx = prev.findIndex(
-        (o) => {
-          const oTableClean = o.table.trim().toLowerCase().replace(/[\s-_]+/g, '');
-          const isSameTable =
-            oTableClean === cleanTargetTable ||
-            (targetTableId && o.tableId && o.tableId.toLowerCase() === targetTableId.toLowerCase());
-          const isUnpaid = o.paymentStatus === 'UNPAID' || o.paymentStatus === 'Unpaid' || o.paymentStatus === 'Pending';
-          return isSameTable && isUnpaid && o.status !== 'Cancelled';
-        }
-      );
+    // Create separate order
+    const orderNum = `#ORD-${1000 + orders.length + 1}`;
+    const newOrder: Order = {
+      id: `ord-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      orderNumber: orderNum,
+      table: tableName,
+      tableId: targetTableId,
+      source: 'QR',
+      customer: `QR Guest (${tableName})`,
+      orderType: 'Dine In',
+      items: orderItems,
+      total,
+      paymentStatus: 'UNPAID',
+      status: 'NEW',
+      dateTime: `Today, ${timeStr}`,
+      note: 'Customer QR Order',
+    };
 
-      if (existingIdx > -1) {
-        // Table already has an active unpaid bill: Merge new items into existing order
-        const existingOrder = prev[existingIdx];
-        const mergedItems: OrderItem[] = [...existingOrder.items];
-
-        for (const newItem of orderItems) {
-          const itemIdx = mergedItems.findIndex(
-            (i) => i.id === newItem.id || i.name.trim().toLowerCase() === newItem.name.trim().toLowerCase()
-          );
-          if (itemIdx > -1) {
-            const currentItem = mergedItems[itemIdx];
-            const updatedQty = currentItem.quantity + newItem.quantity;
-            mergedItems[itemIdx] = {
-              ...currentItem,
-              quantity: updatedQty,
-              lineTotal: currentItem.unitPrice * updatedQty,
-            };
-          } else {
-            mergedItems.push(newItem);
-          }
-        }
-
-        const newTotal = mergedItems.reduce((sum, item) => sum + item.lineTotal, 0);
-
-        const updatedOrder: Order = {
-          ...existingOrder,
-          items: mergedItems,
-          total: newTotal,
-          status: 'NEW', // reset to NEW so kitchen knows new items arrived to prepare
-          dateTime: `Today, ${timeStr}`,
-        };
-
-        const updatedList = [...prev];
-        updatedList[existingIdx] = updatedOrder;
-
-        // Dispatch real application-level notification with added items
-        useOrderNotificationStore.getState().notifyNewOrder({
-          ...updatedOrder,
-          items: orderItems,
-          total: total,
-        });
-
-        return updatedList;
-      }
-
-      // No active unpaid order for this table: Create brand new bill
-      const orderNum = `#ORD-${1000 + prev.length + 1}`;
-      const newOrder: Order = {
-        id: `ord-${Date.now()}`,
-        orderNumber: orderNum,
-        table: tableName,
-        tableId: targetTableId,
-        source: 'QR',
-        customer: `QR Guest (${tableName})`,
-        orderType: 'Dine In',
-        items: orderItems,
-        total,
-        paymentStatus: 'UNPAID',
-        status: 'NEW',
-        dateTime: `Today, ${timeStr}`,
-        note: 'Customer QR Order',
-      };
-
-      // Dispatch real application-level notification
-      useOrderNotificationStore.getState().notifyNewOrder(newOrder);
-
-      return [newOrder, ...prev];
+    // 1. Submit to shared backend
+    tableSync.submitOrder(newOrder).catch((err) => {
+      console.warn('[handleSendOrderToKitchen] submitOrder fallback:', err);
     });
 
-    // Update active table status to Busy
+    // 2. Add to client orders list
+    setOrders((prev) => [newOrder, ...prev]);
+
+    // 3. Update active table status to Busy & increment outstanding table amount
     setTables((prev) =>
       prev.map((t) => {
-        const cleanTable = tableName.trim().toLowerCase().replace(/[\s-_]+/g, '');
         const isMatch =
           t.name.trim().toLowerCase().replace(/[\s-_]+/g, '') === cleanTable ||
           (targetTableId && t.id.toLowerCase() === targetTableId.toLowerCase());
-        return isMatch ? { ...t, status: 'Busy' } : t;
+        if (isMatch) {
+          const prevTotal = t.totalAmount || 0;
+          return {
+            ...t,
+            status: 'Busy',
+            isActive: true,
+            lastActivity: Date.now(),
+            totalAmount: Math.round((prevTotal + total) * 100) / 100,
+          };
+        }
+        return t;
       })
     );
+
+    // 4. Dispatch real application-level notification
+    useOrderNotificationStore.getState().notifyNewOrder(newOrder);
   };
 
   return (
@@ -434,6 +555,8 @@ function AppContent() {
       onOrderCreate={handleOrderCreate}
       onCustomerEnterTable={handleCustomerEnterTable}
       onSetTableStatus={handleSetTableStatus}
+      onPayTable={handlePayTable}
+      onClearTable={handleClearTable}
     />
   );
 }

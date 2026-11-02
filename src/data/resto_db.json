@@ -1,0 +1,95 @@
+{
+  "tables": [
+    {
+      "id": "t1",
+      "name": "Table 01",
+      "section": "Main Dining",
+      "seats": 4,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t1",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t2",
+      "name": "Table 02",
+      "section": "Main Dining",
+      "seats": 2,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t2",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t3",
+      "name": "Table 03",
+      "section": "Main Dining",
+      "seats": 4,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t3",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t4",
+      "name": "Table 04",
+      "section": "Main Dining",
+      "seats": 4,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t4",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t5",
+      "name": "Table 05",
+      "section": "Indoor Booths",
+      "seats": 6,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t5",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t6",
+      "name": "Table 06",
+      "section": "Indoor Booths",
+      "seats": 4,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t6",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t7",
+      "name": "Table 07",
+      "section": "Outdoor Terrace",
+      "seats": 2,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t7",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    },
+    {
+      "id": "t8",
+      "name": "Table 08",
+      "section": "Outdoor Terrace",
+      "seats": 4,
+      "status": "Available",
+      "qrCodeUrl": "restocontrol.menu/menu/t8",
+      "isActive": false,
+      "lastActivity": null,
+      "totalAmount": 0
+    }
+  ],
+  "orders": [],
+  "transactions": [],
+  "version": 1
+}

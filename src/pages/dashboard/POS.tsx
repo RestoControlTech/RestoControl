@@ -150,14 +150,6 @@ export default function POS({
         return;
       }
     }
-
-    // Default mount check: If initial table has an active order, load it
-    if (selectedTableId) {
-      const activeOrder = findActiveOrderForTable(selectedTableId);
-      if (activeOrder) {
-        loadOrder(activeOrder);
-      }
-    }
   }, [urlOrderId, urlTable, urlTableId, orders, tables]);
 
   // Compute next order number for new orders

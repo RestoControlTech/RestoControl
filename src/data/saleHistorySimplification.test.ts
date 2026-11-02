@@ -33,7 +33,7 @@ const rootSrc = path.resolve(__dirname, '..');
   assert.strictEqual(navIds.includes('dashboard' as any), false, 'Dashboard must NOT be in navigation');
   assert.strictEqual(navIds.includes('reports' as any), false, 'Reports must NOT be in navigation');
 
-  const expectedNav = ['POS', 'Orders', 'Sale History', 'Menu', 'Tables', 'Staff', 'Customers', 'Settings'];
+  const expectedNav = ['POS', 'Orders', 'Sale History', 'Menu', 'Tables', 'Staff', 'Customers', 'Settings', 'Profile'];
   assert.deepStrictEqual(navLabels, expectedNav, 'Navigation items must exactly match specified order and labels');
 
   console.log('✓ 1. Navigation verified: Dashboard and Reports removed; POS, Orders, Sale History, Menu, Tables, Staff, Customers, Settings present.');

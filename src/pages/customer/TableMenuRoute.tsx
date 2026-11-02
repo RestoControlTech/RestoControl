@@ -8,7 +8,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { QrCode, ArrowLeft, Home } from 'lucide-react';
 import { Table, MenuItem, Category } from '../../types';
 import QRMenu, { QROrderSubmission } from './QRMenu';
-import { Button } from '../../components/ui';
+import { Button, ErrorBoundary } from '../../components/ui';
+import { tableSync } from '../../services/tableSync';
 
 interface TableMenuRouteProps {
   tables: Table[];
@@ -28,19 +29,34 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
   const { tableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
 
-  // Match table by id (case-insensitive) or slugified name (e.g. 't1', 'table-01', 'table01')
+  // Match table by id (case-insensitive), slugified name, or extracted table number (e.g. 't1', '1', 'table-01', 'table-1')
   const cleanId = (tableId || '').trim().toLowerCase();
+  const searchNum = cleanId.match(/\d+/)?.[0];
   const matchedTable = tables.find((t) => {
     const tId = t.id.toLowerCase();
     const tSlug = t.name.toLowerCase().replace(/[\s-_]+/g, '');
     const cleanSearch = cleanId.replace(/[\s-_]+/g, '');
-    return tId === cleanId || tSlug === cleanSearch;
+    if (tId === cleanId || tSlug === cleanSearch) return true;
+    if (searchNum) {
+      const tIdNum = t.id.match(/\d+/)?.[0];
+      const tNameNum = t.name.match(/\d+/)?.[0];
+      if (
+        (tIdNum && parseInt(tIdNum, 10) === parseInt(searchNum, 10)) ||
+        (tNameNum && parseInt(tNameNum, 10) === parseInt(searchNum, 10))
+      ) {
+        return true;
+      }
+    }
+    return false;
   });
 
-  // Automatically mark table as Busy when a customer accesses the table menu
+  // Automatically mark table as Busy and record backend activity when customer accesses the table menu
   React.useEffect(() => {
-    if (matchedTable && matchedTable.status === 'Available') {
-      onCustomerEnterTable?.(matchedTable.id);
+    if (matchedTable) {
+      if (matchedTable.status === 'Available') {
+        onCustomerEnterTable?.(matchedTable.id);
+      }
+      tableSync.recordTableActivity(matchedTable.id).catch(() => {});
     }
   }, [matchedTable?.id, matchedTable?.status, onCustomerEnterTable]);
 
@@ -81,14 +97,19 @@ export const TableMenuRoute: React.FC<TableMenuRouteProps> = ({
   }
 
   return (
-    <div id="client-app-root" className="relative">
-      <QRMenu
-        initialMenuItems={menuItems}
-        categories={categories}
-        tableName={matchedTable.name}
-        tableId={matchedTable.id}
-        onSendOrderToKitchen={onSendOrderToKitchen}
-      />
-    </div>
+    <ErrorBoundary
+      fallbackTitle="មិនអាចបើកទំព័រម៉ឺនុយបានទេ"
+      fallbackMessage="មានបញ្ហាក្នុងការផ្ទុកម៉ឺនុយសម្រាប់តុនេះ។ សូមព្យាយាមម្តងទៀត។"
+    >
+      <div id="client-app-root" className="relative">
+        <QRMenu
+          initialMenuItems={menuItems || []}
+          categories={categories || []}
+          tableName={matchedTable.name}
+          tableId={matchedTable.id}
+          onSendOrderToKitchen={onSendOrderToKitchen}
+        />
+      </div>
+    </ErrorBoundary>
   );
 };

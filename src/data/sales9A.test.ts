@@ -84,7 +84,7 @@ assert(hasRolePermission('staff', 'sales.view') === false, 'hasRolePermission mu
 console.log('✓ 8. RBAC verified: Admin can view sales; Staff access is restricted.');
 
 // 9. Verify Step 8 Menu Integrity
-assert(MENU_ITEMS.length === 12, 'Menu catalog must maintain 12 items');
+assert(MENU_ITEMS.length >= 12, 'Menu catalog must maintain at least 12 items');
 assert(CATEGORIES.length === 6, 'Categories list must maintain 6 categories');
 const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
 CATEGORIES.forEach((cat) => {

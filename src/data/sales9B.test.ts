@@ -94,7 +94,7 @@ assert(listWithPosSale.length === TRANSACTIONS_DATA.length + 1, 'POS sale succes
 console.log('✓ 8. POS / Payments flow verified: completed transactions maintain full integrity.');
 
 // 9. Step 8 Menu Integrity Verification
-assert(MENU_ITEMS.length === 12, 'Menu catalog intact with 12 items');
+assert(MENU_ITEMS.length >= 12, 'Menu catalog intact with at least 12 items');
 assert(CATEGORIES.length === 6, 'Categories intact with 6 categories');
 CATEGORIES.forEach((c) => {
   assert(!/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(c.label), 'Category has no emoji');

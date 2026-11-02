@@ -163,8 +163,29 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <span className="text-sm font-normal">→</span>
           </Button>
 
+          <div className="relative my-4 flex items-center justify-center">
+            <div className="border-t border-stone-200 w-full"></div>
+            <span className="bg-white px-2 text-[10px] uppercase font-bold text-stone-400 absolute">or</span>
+          </div>
+
+          {/* Quick link to customer QR Menu */}
+          <Button
+            type="button"
+            id="btn-open-customer-menu"
+            variant="secondary"
+            size="md"
+            fullWidth
+            onClick={() => navigate('/customer')}
+            className="text-stone-700 hover:text-orange-600 border-stone-200"
+          >
+            <span>📱 មើលម៉ឺនុយអតិថិជន (Customer QR Menu)</span>
+          </Button>
         </form>
 
+        <div className="mt-4 p-2.5 rounded-xl bg-stone-50 border border-stone-200/60 text-center text-[10px] text-stone-500">
+          <span className="font-semibold text-stone-700">Demo Staff: </span>
+          <code className="text-orange-600 font-bold">panbunhen58@gmail.com</code> / <code className="text-stone-700 font-bold">Heng1111</code>
+        </div>
       </div>
 
       {/* Gateway Telemetry and stats sub-label footer */}

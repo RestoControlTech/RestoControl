@@ -37,10 +37,11 @@ export interface QRMenuProps {
 export default function QRMenu({
   initialMenuItems = [],
   categories = [],
-  tableName,
+  tableName = 'Table 01',
   tableId,
   onSendOrderToKitchen,
 }: QRMenuProps) {
+  const safeTableName = typeof tableName === 'string' && tableName.trim() ? tableName : 'Table 01';
   const { settings } = useSettings();
   const { t } = useTranslation();
   const [currentCategory, setCurrentCategory] = useState('all');
@@ -53,11 +54,13 @@ export default function QRMenu({
 
   // Strictly use categories from props (default to Khmer 'ទាំងអស់')
   const displayCategories = useMemo(() => {
-    if (categories && categories.length > 0) {
-      return categories.map((c) => ({
-        id: c.id,
-        label: c.id === 'all' && (c.label === 'All Items' || !c.label) ? 'ទាំងអស់' : c.label,
-      }));
+    if (categories && Array.isArray(categories) && categories.length > 0) {
+      return categories
+        .filter((c) => Boolean(c && c.id))
+        .map((c) => ({
+          id: c.id,
+          label: c.id === 'all' && (c.label === 'All Items' || !c.label) ? 'ទាំងអស់' : (c.label || c.id),
+        }));
     }
     return [{ id: 'all', label: 'ទាំងអស់' }];
   }, [categories]);
@@ -160,18 +163,20 @@ export default function QRMenu({
   const filteredItems = useMemo(() => {
     if (uiState !== 'normal') return [];
 
-    let list = initialMenuItems || [];
+    let list = Array.isArray(initialMenuItems) ? initialMenuItems.filter(Boolean) : [];
 
     if (currentCategory !== 'all') {
       const targetCat = currentCategory.toLowerCase();
-      list = list.filter(item => (item.category || '').toLowerCase() === targetCat);
+      list = list.filter(item => item && (item.category || '').toLowerCase() === targetCat);
     }
 
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(item =>
-        (item.name || '').toLowerCase().includes(q) ||
-        (item.description || '').toLowerCase().includes(q)
+        item && (
+          (item.name || '').toLowerCase().includes(q) ||
+          (item.description || '').toLowerCase().includes(q)
+        )
       );
     }
 
@@ -216,7 +221,7 @@ export default function QRMenu({
 
             {/* Table designation tag badge */}
             <div className="bg-stone-100 border border-stone-200/80 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-              <span className="text-[10px] font-bold text-stone-700 tracking-tight">តុ <span className="text-orange-600 font-extrabold">{tableName.replace(/^Table\s*/i, '')}</span></span>
+              <span className="text-[10px] font-bold text-stone-700 tracking-tight">តុ <span className="text-orange-600 font-extrabold">{safeTableName.replace(/^Table\s*/i, '')}</span></span>
             </div>
           </div>
 
@@ -354,7 +359,7 @@ export default function QRMenu({
                     <span className="text-stone-500 font-normal">·</span>
                     <span className="text-orange-400 font-black">{formatPrice(cartTotal)}</span>
                   </div>
-                  <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">ការកុម្ម៉ង់ {tableName}</p>
+                  <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wider">ការកុម្ម៉ង់ {safeTableName}</p>
                 </div>
               </div>
 
@@ -379,7 +384,7 @@ export default function QRMenu({
         <CartDrawer
           isOpen={isCartOpen}
           onClose={() => setIsCartOpen(false)}
-          tableName={tableName}
+          tableName={safeTableName}
           cart={cart}
           cartTotal={cartTotal}
           onAddToCart={addToCart}

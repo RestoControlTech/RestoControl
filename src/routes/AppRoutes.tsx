@@ -9,6 +9,8 @@ import { MenuItem, Category, Table, TableStatus, StaffMember, Transaction, Order
 
 // Auth and Route Protection
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import { useAuth } from '../hooks/useAuth';
+import { ErrorBoundary } from '../components/ui';
 
 // Layout and Pages imports
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -53,6 +55,8 @@ export interface AppRoutesProps {
   onOrderCreate?: (order: Order) => void;
   onCustomerEnterTable?: (tableIdOrName: string) => void;
   onSetTableStatus?: (tableId: string, status: TableStatus) => void;
+  onPayTable?: (tableId: string, paymentInfo?: Partial<import('../types').PaymentConfirmation>) => void;
+  onClearTable?: (tableId: string) => void;
 }
 
 const CustomerRouteWrapper: React.FC<{
@@ -63,25 +67,44 @@ const CustomerRouteWrapper: React.FC<{
   onSendOrderToKitchen: (orderOrCount: import('../pages/customer/QRMenu').QROrderSubmission | number, total?: number) => void;
   onCustomerEnterTable?: (tableIdOrName: string) => void;
 }> = ({ menuItems, categories, tableName, tables, onSendOrderToKitchen, onCustomerEnterTable }) => {
-  React.useEffect(() => {
-    const matched = tables.find((t) => t.name === tableName || t.id === tableName);
-    if (matched && matched.status === 'Available') {
-      onCustomerEnterTable?.(matched.id);
-    }
-  }, [tableName, tables, onCustomerEnterTable]);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const safeTableName = tableName || (tables && tables.length > 0 ? tables[0].name : 'Table 01');
+  const matched = (tables || []).find((t) => t.name === safeTableName || t.id === safeTableName);
+  const matchedId = matched?.id || (tables && tables.length > 0 ? tables[0].id : 't1');
+  const matchedStatus = matched?.status;
 
-  const matchedId = tables.find((t) => t.name === tableName || t.id === tableName)?.id;
+  React.useEffect(() => {
+    if (matchedId && matchedStatus === 'Available') {
+      onCustomerEnterTable?.(matchedId);
+    }
+  }, [matchedId, matchedStatus, onCustomerEnterTable]);
 
   return (
-    <div id="client-app-root" className="relative">
-      <QRMenu
-        initialMenuItems={menuItems}
-        categories={categories}
-        tableName={tableName}
-        tableId={matchedId}
-        onSendOrderToKitchen={onSendOrderToKitchen}
-      />
-    </div>
+    <ErrorBoundary
+      fallbackTitle="មិនអាចបើកទំព័រម៉ឺនុយបានទេ"
+      fallbackMessage="មានបញ្ហាក្នុងការផ្ទុកម៉ឺនុយសម្រាប់តុនេះ។ សូមព្យាយាមម្តងទៀត។"
+    >
+      <div id="client-app-root" className="relative">
+        {isAuthenticated && (
+          <button
+            type="button"
+            id="btn-back-to-pos"
+            onClick={() => navigate('/pos')}
+            className="fixed top-3 right-3 z-50 bg-stone-900/90 hover:bg-stone-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-lg border border-stone-700/80 backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            ← POS Dashboard
+          </button>
+        )}
+        <QRMenu
+          initialMenuItems={menuItems || []}
+          categories={categories || []}
+          tableName={safeTableName}
+          tableId={matchedId}
+          onSendOrderToKitchen={onSendOrderToKitchen}
+        />
+      </div>
+    </ErrorBoundary>
   );
 };
 
@@ -114,6 +137,8 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
   onOrderCreate,
   onCustomerEnterTable,
   onSetTableStatus,
+  onPayTable,
+  onClearTable,
 }) => {
   const navigate = useNavigate();
 
@@ -155,6 +180,7 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
         }
       />
       <Route path="/qr" element={<Navigate to="/customer" replace />} />
+      <Route path="/customers" element={<Navigate to="/customer" replace />} />
       <Route
         path="/menu/:tableId"
         element={
@@ -224,9 +250,12 @@ export const AppRoutes: React.FC<AppRoutesProps> = ({
             >
               <Tables
                 tables={tables}
+                orders={orders}
                 onToggleStatus={onToggleTableStatus}
                 onAddTable={onAddTable}
                 onViewMenu={onViewMenuFromPOS}
+                onPayTable={onPayTable}
+                onOpenInPOS={(tableId) => navigate(`/pos?tableId=${encodeURIComponent(tableId)}`)}
                 searchQuery={searchQuery}
               />
             </DashboardLayout>

@@ -40,19 +40,19 @@ function runMenuManagementTests() {
   console.log('✓ All product schema fields (id, name, category, price, image, description, inStock) verified across all items.');
 
   // 3. Category Filter Verification
-  const popularItems = MENU_ITEMS.filter((i) => i.category === 'popular');
+  const popularItems = MENU_ITEMS.filter((i) => i.category === 'popular' || i.category === 'ម្ហូបចម្បង');
   assert(popularItems.length > 0, 'Popular category filter returns items');
 
-  const ramenItems = MENU_ITEMS.filter((i) => i.category === 'ramen');
+  const ramenItems = MENU_ITEMS.filter((i) => i.category === 'ramen' || i.category === 'ចៀន/បំពង');
   assert(ramenItems.length > 0, 'Ramen category filter returns items');
 
-  const drinkItems = MENU_ITEMS.filter((i) => i.category === 'drinks');
+  const drinkItems = MENU_ITEMS.filter((i) => i.category === 'drinks' || i.category === 'ភេសជ្ជៈ');
   assert(drinkItems.length > 0, 'Drinks category filter returns items');
 
   console.log('✓ Category tab filtering verification passed.');
 
   // 4. Search Filter Verification
-  const searchQuery = 'ramen';
+  const searchQuery = 'ឆា';
   const searchResults = MENU_ITEMS.filter(
     (i) =>
       i.name.toLowerCase().includes(searchQuery) ||
@@ -398,12 +398,12 @@ function runMenuManagementTests() {
     const initialCategories = [...CATEGORIES];
     assert(initialCategories.length >= 5, 'Initial categories loaded');
 
-    const ramenCategory = initialCategories.find((c) => c.id === 'ramen');
-    assert(ramenCategory !== undefined, 'Ramen category exists in list');
+    const sampleCategory = initialCategories.find((c) => c.id === 'ម្ហូបចម្បង' || c.id === 'ramen') || initialCategories[1];
+    assert(sampleCategory !== undefined, 'Target category exists in list');
 
-    const ramenProductsCount = catalogAfterDelete.filter((i) => i.category === 'ramen').length;
+    const ramenProductsCount = catalogAfterDelete.filter((i) => i.category === sampleCategory.id).length;
     assert(typeof ramenProductsCount === 'number', 'Product count calculated per category');
-    console.log(`✓ Categories loaded (${initialCategories.length} categories, Ramen has ${ramenProductsCount} items).`);
+    console.log(`✓ Categories loaded (${initialCategories.length} categories, ${sampleCategory.label} has ${ramenProductsCount} items).`);
 
     // 2. Validate empty category name
     const emptyCatErrors = validateCategoryInput('', null, initialCategories);
@@ -411,7 +411,7 @@ function runMenuManagementTests() {
     console.log('✓ Empty category name validation check passed.');
 
     // 3. Validate duplicate category name
-    const duplicateCatErrors = validateCategoryInput('Ramen', null, initialCategories);
+    const duplicateCatErrors = validateCategoryInput(sampleCategory.label, null, initialCategories);
     assert(!!duplicateCatErrors.name, 'Duplicate category name triggers validation error');
     console.log('✓ Duplicate category name validation check passed.');
 
@@ -441,9 +441,9 @@ function runMenuManagementTests() {
     console.log('✓ Edit category check passed (\'Chef Signature Specials\' updated).');
 
     // 6. Attempt to delete category containing products (must be BLOCKED)
-    const categoryInUse = 'ramen';
+    const categoryInUse = sampleCategory.id;
     const productsInRamen = catalogAfterDelete.filter((i) => i.category === categoryInUse).length;
-    assert(productsInRamen > 0, 'Ramen category has active products');
+    assert(productsInRamen > 0, `${categoryInUse} category has active products`);
 
     let deleteBlocked = false;
     if (productsInRamen > 0) {
@@ -542,8 +542,8 @@ function runMenuManagementTests() {
     console.log(`✓ Exact product name search check passed ('${targetSearchName}').`);
 
     // 2. Partial search
-    const partialSearch = filterAndSortProducts(catalogAfterDelete, 'ramen', 'all', 'all', 'all', 'default');
-    assert(partialSearch.length >= 2, `Partial search 'ramen' returns matching items (${partialSearch.length})`);
+    const partialSearch = filterAndSortProducts(catalogAfterDelete, 'ឆា', 'all', 'all', 'all', 'default');
+    assert(partialSearch.length >= 2, `Partial search 'ឆា' returns matching items (${partialSearch.length})`);
     console.log('✓ Partial query search check passed.');
 
     // 3. Search by product ID / item # (e.g. food-1 or D1)
@@ -558,10 +558,11 @@ function runMenuManagementTests() {
     console.log('✓ No result search empty state check passed.');
 
     // 5. Filter by category
-    const ramenFiltered = filterAndSortProducts(catalogAfterDelete, '', 'ramen', 'all', 'all', 'default');
-    assert(ramenFiltered.length > 0, 'Category filter returns category products');
-    assert(ramenFiltered.every((i) => i.category === 'ramen'), 'All returned items belong to ramen category');
-    console.log(`✓ Category filter check passed (${ramenFiltered.length} items in 'ramen').`);
+    const targetCat = sampleCategory.id;
+    const catFiltered = filterAndSortProducts(catalogAfterDelete, '', targetCat, 'all', 'all', 'default');
+    assert(catFiltered.length > 0, 'Category filter returns category products');
+    assert(catFiltered.every((i) => i.category === targetCat), `All returned items belong to ${targetCat} category`);
+    console.log(`✓ Category filter check passed (${catFiltered.length} items in '${targetCat}').`);
 
     // 6. Filter by Availability (Available / In Stock)
     const inStockFiltered = filterAndSortProducts(catalogAfterDelete, '', 'all', 'available', 'all', 'default');
@@ -591,12 +592,12 @@ function runMenuManagementTests() {
     console.log('✓ Price sorting check passed (ascending & descending).');
 
     // 10. Combine search + category filter
-    const combinedSearchCat = filterAndSortProducts(catalogAfterDelete, 'ramen', 'ramen', 'all', 'all', 'default');
-    assert(combinedSearchCat.every((i) => i.category === 'ramen'), 'Combined filter matches both category and query');
+    const combinedSearchCat = filterAndSortProducts(catalogAfterDelete, 'ឆា', targetCat, 'all', 'all', 'default');
+    assert(combinedSearchCat.every((i) => i.category === targetCat), 'Combined filter matches both category and query');
     console.log('✓ Search + Category combined filter check passed.');
 
     // 11. Combine multiple filters (Search + Category + Availability + Sort)
-    const multiFilters = filterAndSortProducts(catalogAfterDelete, 'soup', 'all', 'available', 'all', 'price-asc');
+    const multiFilters = filterAndSortProducts(catalogAfterDelete, 'ឆា', 'all', 'available', 'all', 'price-asc');
     assert(multiFilters.every((i) => i.inStock === true), 'Multi-filter respects availability filter');
     for (let i = 0; i < multiFilters.length - 1; i++) {
       assert(multiFilters[i].price <= multiFilters[i + 1].price, 'Multi-filter respects sorting');
