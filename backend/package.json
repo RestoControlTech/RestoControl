@@ -11,10 +11,15 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:status": "docker compose ps",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:format": "prisma format",
     "test:db": "tsx tests/db-connection.test.ts",
-    "test": "tsx tests/health.test.ts && tsx tests/db-connection.test.ts"
+    "test:prisma": "tsx tests/prisma.test.ts",
+    "test": "tsx tests/health.test.ts && tsx tests/db-connection.test.ts && tsx tests/prisma.test.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -29,6 +34,7 @@
     "@types/node": "^22.13.0",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.2",
+    "prisma": "^6.19.3",
     "supertest": "^7.0.0",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3"
