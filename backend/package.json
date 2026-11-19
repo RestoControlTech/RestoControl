@@ -17,7 +17,8 @@
     "test:db": "tsx tests/db-connection.test.ts",
     "test:prisma": "tsx tests/prisma.test.ts",
     "test:infra": "tsx tests/infrastructure.test.ts",
-    "test": "tsx tests/health.test.ts && tsx tests/db-connection.test.ts && tsx tests/prisma.test.ts && tsx tests/infrastructure.test.ts"
+    "test:auth": "tsx tests/auth.test.ts",
+    "test": "tsx tests/health.test.ts && tsx tests/db-connection.test.ts && tsx tests/prisma.test.ts && tsx tests/infrastructure.test.ts && tsx tests/auth.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

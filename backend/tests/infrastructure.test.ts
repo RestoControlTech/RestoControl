@@ -207,9 +207,6 @@ async function runTests() {
     const validToken = generateToken({
       userId: activeUser.id,
       restaurantId: restaurantA.id,
-      roleId: roleAdminA.id,
-      roleName: 'ADMIN',
-      email: activeUser.email,
     });
 
     const res2 = await request(app)
@@ -248,9 +245,6 @@ async function runTests() {
       {
         userId: activeUser.id,
         restaurantId: restaurantA.id,
-        roleId: roleAdminA.id,
-        roleName: 'ADMIN',
-        email: activeUser.email,
       },
       '1ms' // Expire immediately in 1 millisecond
     );
@@ -274,9 +268,6 @@ async function runTests() {
     const inactiveToken = generateToken({
       userId: inactiveUser.id,
       restaurantId: restaurantA.id,
-      roleId: roleAdminA.id,
-      roleName: 'ADMIN',
-      email: inactiveUser.email,
     });
 
     const res5 = await request(app)
@@ -319,9 +310,6 @@ async function runTests() {
     const cashierToken = generateToken({
       userId: cashierUser.id,
       restaurantId: restaurantA.id,
-      roleId: roleCashierA.id,
-      roleName: 'CASHIER',
-      email: cashierUser.email,
     });
 
     const res7b = await request(app)

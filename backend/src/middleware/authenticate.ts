@@ -28,10 +28,11 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     // Verify token cryptographic signature and expiration
     const payload = verifyToken(token);
 
-    // Query active user from PostgreSQL with Role and Permissions
+    // Query active user from PostgreSQL with Restaurant, Role, and Permissions
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       include: {
+        restaurant: true,
         role: {
           include: {
             permissions: {
@@ -53,6 +54,11 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       throw new UnauthorizedError('User account is deactivated');
     }
 
+    // Check restaurant active status
+    if (!user.restaurant || !user.restaurant.isActive) {
+      throw new UnauthorizedError('Restaurant account is deactivated');
+    }
+
     // Check tenant boundary against token claims
     if (user.restaurantId !== payload.restaurantId) {
       throw new UnauthorizedError('Tenant mismatch in token claims');
@@ -68,6 +74,11 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       email: user.email,
       isActive: user.isActive,
       permissions: user.role.permissions.map((rp) => rp.permission.code),
+      restaurant: {
+        id: user.restaurant.id,
+        name: user.restaurant.name,
+        slug: user.restaurant.slug,
+      },
     };
 
     // Guarantee restaurantId comes STRICTLY from authenticated identity
