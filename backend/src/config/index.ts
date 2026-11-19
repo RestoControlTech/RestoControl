@@ -14,6 +14,8 @@ export interface ServerConfig {
   nodeEnv: 'development' | 'production' | 'test';
   frontendUrl: string;
   databaseUrl: string;
+  jwtSecret: string;
+  jwtExpiresIn: string;
   isProduction: boolean;
   isDevelopment: boolean;
   isTest: boolean;
@@ -53,11 +55,24 @@ function parseDatabaseUrl(val: string | undefined): string {
   return url;
 }
 
+function parseJwtSecret(val: string | undefined): string {
+  const secret = (val || '').trim();
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable is strictly required in production.');
+    }
+    return 'restocontrol_dev_jwt_secret_change_in_production';
+  }
+  return secret;
+}
+
 export const config: ServerConfig = {
   port: parsePort(process.env.PORT, 4000),
   nodeEnv: parseNodeEnv(process.env.NODE_ENV),
   frontendUrl: parseFrontendUrl(process.env.FRONTEND_URL),
   databaseUrl: parseDatabaseUrl(process.env.DATABASE_URL),
+  jwtSecret: parseJwtSecret(process.env.JWT_SECRET),
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test',
   isTest: process.env.NODE_ENV === 'test',
