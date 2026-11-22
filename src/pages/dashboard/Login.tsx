@@ -37,8 +37,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
   }, [isAuthenticated, navigate, location]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setError(null);
 
     if (!email.trim() || !password.trim()) {
@@ -48,18 +49,22 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     setIsLoading(true);
 
-    const result = login(email, password);
+    try {
+      const result = await login(email, password);
 
-    setIsLoading(false);
-
-    if (result.success) {
-      if (onLoginSuccess) {
-        onLoginSuccess({ name: email, role: 'admin' });
+      if (result.success) {
+        if (onLoginSuccess) {
+          onLoginSuccess({ name: email, role: 'admin' });
+        }
+        const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/pos';
+        navigate(from, { replace: true });
+      } else {
+        setError(result.error || 'Invalid email or password. Please try again.');
       }
-      const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/pos';
-      navigate(from, { replace: true });
-    } else {
-      setError(result.error || 'Invalid email or password. Please try again.');
+    } catch {
+      setError('An unexpected error occurred during login. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

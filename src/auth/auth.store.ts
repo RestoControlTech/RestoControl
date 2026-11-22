@@ -5,7 +5,15 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { AuthState, User } from '../types';
+import { AuthState, User, Role } from '../types';
+import {
+  apiLogin,
+  apiGetMe,
+  apiLogout,
+  getToken,
+  clearToken,
+  BackendSafeUser,
+} from '../services/authApi';
 
 interface MockUserEntry {
   credentials: {
@@ -17,6 +25,38 @@ interface MockUserEntry {
 
 export const DEFAULT_AVATAR = 'https://res.cloudinary.com/cc67bunh/image/upload/v1790939496/logo.jpg';
 
+/**
+ * Maps the safe user payload returned by the Express backend into the frontend User domain model.
+ */
+export function mapBackendUserToFrontend(backendUser: BackendSafeUser): User {
+  const roleName = backendUser.role?.name?.toLowerCase() || '';
+  const normalizedRole: Role = roleName === 'admin' ? 'admin' : 'staff';
+
+  return {
+    id: backendUser.id,
+    name: backendUser.name,
+    email: backendUser.email,
+    role: normalizedRole,
+    avatar: backendUser.avatarUrl || DEFAULT_AVATAR,
+    avatarPublicId: undefined,
+    phone: backendUser.phone || undefined,
+    permissions: backendUser.permissions || [],
+    restaurantId: backendUser.restaurantId,
+    authSource: 'database',
+    restaurant: backendUser.restaurant
+      ? {
+          id: backendUser.restaurant.id,
+          name: backendUser.restaurant.name,
+          slug: backendUser.restaurant.slug,
+        }
+      : undefined,
+  };
+}
+
+/**
+ * @deprecated MOCK_USERS retained strictly for legacy offline fixtures and tests.
+ * Production authentication connects directly to Express + PostgreSQL via apiLogin().
+ */
 export const MOCK_USERS: MockUserEntry[] = [
   // Primary Admins
   {
@@ -30,6 +70,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'panbunhen58@gmail.com',
       role: 'admin',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   {
@@ -43,6 +84,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'Buma168@gmail.com',
       role: 'admin',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   {
@@ -56,6 +98,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'Lymeng111@gmail.com',
       role: 'admin',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   // Staff Members
@@ -70,6 +113,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'Panhrith233@gmail.com',
       role: 'staff',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   {
@@ -83,6 +127,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'Dalyna188@gmail.com',
       role: 'staff',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   {
@@ -96,6 +141,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'romromloveyou@gmail.com',
       role: 'staff',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   // Legacy / Default demo accounts
@@ -110,6 +156,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'admin@restaurant.com',
       role: 'admin',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   {
@@ -123,6 +170,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'staff@restaurant.com',
       role: 'staff',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   // Legacy / Quick PIN fallback support for terminal touch keypad
@@ -137,6 +185,7 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'admin@restaurant.com',
       role: 'admin',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
   {
@@ -150,16 +199,19 @@ export const MOCK_USERS: MockUserEntry[] = [
       email: 'staff@restaurant.com',
       role: 'staff',
       avatar: DEFAULT_AVATAR,
+      authSource: 'legacy_mock',
     },
   },
 ];
+
+// Persistent in-memory storage for Node/test environments when localStorage is absent
+const memoryStore = new Map<string, string>();
 
 // Safe storage resolver supporting browser localStorage and Node/test environments
 const getStorage = () => {
   if (typeof window !== 'undefined' && window.localStorage) {
     return window.localStorage;
   }
-  const memoryStore = new Map<string, string>();
   return {
     getItem: (key: string) => memoryStore.get(key) ?? null,
     setItem: (key: string, value: string) => {
@@ -172,18 +224,25 @@ const getStorage = () => {
       memoryStore.clear();
     },
     key: (index: number) => Array.from(memoryStore.keys())[index] ?? null,
-    length: memoryStore.size,
+    get length() {
+      return memoryStore.size;
+    },
   };
 };
+
+// In-flight initialization promise to deduplicate concurrent initializeAuth() calls (e.g. React StrictMode)
+let inFlightInitializeAuth: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      token: getToken(),
       isAuthenticated: false,
+      isLoading: Boolean(getToken()),
 
-      login: (email: string, password: string) => {
-        const cleanEmail = email.trim().toLowerCase();
+      login: async (email: string, password: string) => {
+        const cleanEmail = email.trim();
         const cleanPassword = password.trim();
 
         if (!cleanEmail || !cleanPassword) {
@@ -193,32 +252,109 @@ export const useAuthStore = create<AuthState>()(
           };
         }
 
-        const match = MOCK_USERS.find(
-          (entry) =>
-            entry.credentials.email.toLowerCase() === cleanEmail &&
-            (entry.credentials.password === cleanPassword ||
-              (entry.credentials.password === 'mengmeng168.' && cleanPassword === 'mengmeng168'))
-        );
+        set({ isLoading: true });
 
-        if (match) {
-          set({
-            user: match.user,
-            isAuthenticated: true,
+        try {
+          const res = await apiLogin({
+            email: cleanEmail,
+            password: cleanPassword,
           });
-          return { success: true };
-        }
 
-        return {
-          success: false,
-          error: 'Invalid email or password. Please check your credentials and try again.',
-        };
+          if (res.success && res.data) {
+            const frontendUser = mapBackendUserToFrontend(res.data.user);
+            set({
+              user: frontendUser,
+              token: res.data.token,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            return { success: true };
+          }
+
+          set({ isLoading: false });
+          return {
+            success: false,
+            error: res.error || 'Invalid email or password. Please try again.',
+          };
+        } catch (err: any) {
+          set({ isLoading: false });
+          return {
+            success: false,
+            error: 'Cannot connect to authentication service. Please check your connection and try again.',
+          };
+        }
       },
 
-      logout: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-        });
+      logout: async () => {
+        set({ isLoading: true });
+        try {
+          await apiLogout();
+        } catch {
+          // Fallback: always clear token locally regardless of network outcome
+        } finally {
+          clearToken();
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
+      },
+
+      initializeAuth: async () => {
+        if (inFlightInitializeAuth) {
+          return inFlightInitializeAuth;
+        }
+
+        const runInit = async () => {
+          const token = getToken();
+          if (!token) {
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            return;
+          }
+
+          set({ isLoading: true });
+
+          try {
+            const res = await apiGetMe();
+            if (res.success && res.data) {
+              const frontendUser = mapBackendUserToFrontend(res.data.user);
+              set({
+                user: frontendUser,
+                token,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            } else {
+              clearToken();
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+                isLoading: false,
+              });
+            }
+          } catch {
+            clearToken();
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          } finally {
+            inFlightInitializeAuth = null;
+          }
+        };
+
+        inFlightInitializeAuth = runInit();
+        return inFlightInitializeAuth;
       },
 
       updateUser: (updates: Partial<User>) => {
@@ -243,6 +379,7 @@ export const useAuthStore = create<AuthState>()(
       },
       partialize: (state) => ({
         user: state.user,
+        token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
     }

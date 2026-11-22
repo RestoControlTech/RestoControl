@@ -10,6 +10,7 @@ import { MENU_ITEMS, STAFF_DATA } from './data/mockData';
 import { AppRoutes } from './routes';
 import { useOrderNotificationStore } from './store/orderNotification.store';
 import { tableSync } from './services/tableSync';
+import { useAuthStore } from './auth/auth.store';
 
 // Base initial layout for restaurant tables
 const INITIAL_TABLES: Table[] = [
@@ -34,6 +35,12 @@ const INITIAL_CATEGORIES: Category[] = [
 
 function AppContent() {
   const navigate = useNavigate();
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
+
+  // Restore authenticated session against PostgreSQL backend on mount
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   // Menu items shared between Menu catalog and POS New Order station
   const [menuItems, setMenuItems] = useState<MenuItem[]>(MENU_ITEMS);

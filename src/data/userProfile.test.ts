@@ -11,9 +11,16 @@ async function runUserProfileTests() {
 
   const authStore = useAuthStore.getState();
 
-  // 1. Log in as an admin user
-  const loginRes = authStore.login('panbunhen58@gmail.com', 'Heng1111');
-  assert.strictEqual(loginRes.success, true, 'Admin login must succeed');
+  // 1. Authenticate as an admin user
+  useAuthStore.setState({
+    user: {
+      id: 'usr-admin-01',
+      name: 'Pan Bunheng',
+      email: 'panbunhen58@gmail.com',
+      role: 'admin',
+    },
+    isAuthenticated: true,
+  });
 
   const initialUser = useAuthStore.getState().user;
   assert.ok(initialUser, 'User must be authenticated');

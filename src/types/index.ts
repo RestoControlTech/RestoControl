@@ -5,6 +5,8 @@
 
 export type Role = 'admin' | 'staff';
 
+export type AuthSource = 'database' | 'legacy_mock';
+
 export type { Permission } from '../auth/permissions';
 
 export interface User {
@@ -16,13 +18,24 @@ export interface User {
   avatarPublicId?: string;
   phone?: string;
   joinedDate?: string;
+  permissions?: string[];
+  restaurantId?: string;
+  authSource?: AuthSource;
+  restaurant?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }
 
 export interface AuthState {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => { success: boolean; error?: string };
-  logout: () => void;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  initializeAuth: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
 }
 

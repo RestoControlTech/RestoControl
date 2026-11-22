@@ -158,22 +158,59 @@ console.log('\n--- 4. Testing Login Without Auto-Password ---');
 
 const authStore = useAuthStore.getState();
 
+const originalFetch = globalThis.fetch;
+globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  const body = init?.body ? JSON.parse(init.body as string) : {};
+  if (body.email === 'panbunhen58@gmail.com' && body.password === 'Heng1111') {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          token: 'mock-jwt-token',
+          user: {
+            id: 'usr-admin-01',
+            restaurantId: 'rest-01',
+            name: 'Pan Bunheng',
+            email: 'panbunhen58@gmail.com',
+            role: { id: 'r1', name: 'ADMIN', displayName: 'Admin' },
+            restaurant: { id: 'rest-01', name: 'Autumn', slug: 'autumn' },
+            permissions: ['POS_VIEW', 'POS_ORDER', 'BILLING_SETTLE'],
+          },
+        },
+      }),
+    } as Response;
+  }
+  return {
+    ok: false,
+    status: 401,
+    json: async () => ({
+      success: false,
+      error: 'Invalid email or password.',
+    }),
+  } as Response;
+}) as any;
+
 // Empty password fails
-const emptyPassRes = authStore.login('panbunhen58@gmail.com', '');
+const emptyPassRes = await authStore.login('panbunhen58@gmail.com', '');
 assert.strictEqual(emptyPassRes.success, false, 'Login with empty password must fail');
 
 // Invalid password fails
-const wrongPassRes = authStore.login('panbunhen58@gmail.com', 'wrongpassword');
+const wrongPassRes = await authStore.login('panbunhen58@gmail.com', 'wrongpassword');
 assert.strictEqual(wrongPassRes.success, false, 'Login with incorrect password must fail');
 
 // Correct user credentials succeed
-const validLoginRes = authStore.login('panbunhen58@gmail.com', 'Heng1111');
+const validLoginRes = await authStore.login('panbunhen58@gmail.com', 'Heng1111');
 assert.strictEqual(validLoginRes.success, true, 'Login with valid user credentials must succeed');
 assert.strictEqual(useAuthStore.getState().isAuthenticated, true);
 assert.strictEqual(useAuthStore.getState().user?.role, 'admin');
 
-authStore.logout();
+await authStore.logout();
 assert.strictEqual(useAuthStore.getState().isAuthenticated, false);
+
+globalThis.fetch = originalFetch;
+
 console.log('✓ 4. Login requires user credentials; auto-password removed while auth logic & RBAC preserved.');
 
 // ==========================================
