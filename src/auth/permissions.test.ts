@@ -18,6 +18,7 @@ const adminUser: User = {
   name: 'Admin User',
   email: 'admin@restaurant.com',
   role: 'admin',
+  authSource: 'legacy_mock',
 };
 
 const staffUser: User = {
@@ -25,6 +26,7 @@ const staffUser: User = {
   name: 'Staff Member',
   email: 'staff@restaurant.com',
   role: 'staff',
+  authSource: 'legacy_mock',
 };
 
 function assert(condition: boolean, message: string) {
@@ -147,7 +149,175 @@ export function runPermissionTests() {
     );
   }
 
-  console.log('✔ All permission assertions (Step 5A, 5B, 5C & 5F) passed successfully!');
+  // =========================================================================
+  // 9. STEP 2E FIX 1: Backend Database Permissions Enforcement (No Fallback)
+  // =========================================================================
+  console.log('\n--- Testing Backend vs. Legacy Authentication Permission Security ---');
+
+  // Test Case A: Backend admin with all permissions receives only those permissions
+  const backendAdminAll: User = {
+    id: 'usr-db-admin-all',
+    name: 'DB Admin All',
+    email: 'dbadmin@restaurant.com',
+    role: 'admin',
+    authSource: 'database',
+    restaurantId: 'rest-uuid-1',
+    permissions: ['dashboard.view', 'pos.use', 'orders.view', 'sales.view'],
+  };
+  assert(hasPermission(backendAdminAll, 'dashboard.view') === true, 'Backend admin with dashboard.view has access');
+  assert(hasPermission(backendAdminAll, 'pos.use') === true, 'Backend admin with pos.use has access');
+  assert(hasPermission(backendAdminAll, 'orders.view') === true, 'Backend admin with orders.view has access');
+  assert(hasPermission(backendAdminAll, 'sales.view') === true, 'Backend admin with sales.view has access');
+  // CRITICAL: Backend admin does NOT receive ungranted permissions despite 'admin' role!
+  assert(hasPermission(backendAdminAll, 'settings.manage') === false, 'Backend admin without settings.manage is strictly DENIED (no role fallback)');
+  assert(hasPermission(backendAdminAll, 'products.delete') === false, 'Backend admin without products.delete is strictly DENIED (no role fallback)');
+  console.log('✓ Test 1: Backend admin receives only database-granted permissions.');
+
+  // Test Case B: Backend admin with permissions: [] receives no permissions
+  const backendAdminEmpty: User = {
+    id: 'usr-db-admin-empty',
+    name: 'DB Admin Empty',
+    email: 'emptyadmin@restaurant.com',
+    role: 'admin',
+    authSource: 'database',
+    restaurantId: 'rest-uuid-1',
+    permissions: [],
+  };
+  for (const perm of ALL_PERMISSIONS) {
+    assert(
+      hasPermission(backendAdminEmpty, perm) === false,
+      `Backend admin with empty permissions must be DENIED ${perm}`
+    );
+  }
+  console.log('✓ Test 2: Backend admin with permissions: [] receives NO permissions.');
+
+  // Test Case C: Backend staff with permissions: [] receives no permissions
+  const backendStaffEmpty: User = {
+    id: 'usr-db-staff-empty',
+    name: 'DB Staff Empty',
+    email: 'emptystaff@restaurant.com',
+    role: 'staff',
+    authSource: 'database',
+    restaurantId: 'rest-uuid-1',
+    permissions: [],
+  };
+  for (const perm of ALL_PERMISSIONS) {
+    assert(
+      hasPermission(backendStaffEmpty, perm) === false,
+      `Backend staff with empty permissions must be DENIED ${perm}`
+    );
+  }
+  console.log('✓ Test 3: Backend staff with permissions: [] receives NO permissions.');
+
+  // Test Case D: Backend user missing pos.use cannot access pos.use
+  const backendUserNoPos: User = {
+    id: 'usr-db-nopos',
+    name: 'DB User No POS',
+    email: 'nopos@restaurant.com',
+    role: 'staff',
+    authSource: 'database',
+    restaurantId: 'rest-uuid-1',
+    permissions: ['orders.view', 'tables.view'],
+  };
+  assert(hasPermission(backendUserNoPos, 'pos.use') === false, 'Backend user missing pos.use CANNOT access pos.use');
+  console.log('✓ Test 4: Backend user missing pos.use is strictly denied.');
+
+  // Test Case E: Backend user with pos.use can access pos.use
+  const backendUserWithPos: User = {
+    id: 'usr-db-withpos',
+    name: 'DB User With POS',
+    email: 'withpos@restaurant.com',
+    role: 'staff',
+    authSource: 'database',
+    restaurantId: 'rest-uuid-1',
+    permissions: ['pos.use', 'orders.create'],
+  };
+  assert(hasPermission(backendUserWithPos, 'pos.use') === true, 'Backend user with pos.use CAN access pos.use');
+  assert(hasPermission(backendUserWithPos, 'orders.create') === true, 'Backend user with orders.create CAN access orders.create');
+  assert(hasPermission(backendUserWithPos, 'orders.view') === false, 'Backend user missing orders.view CANNOT access orders.view');
+  console.log('✓ Test 5: Backend user with pos.use is permitted, while ungranted permissions are denied.');
+
+  // Test Case F: Legacy admin still uses existing role permissions
+  const legacyAdmin: User = {
+    id: 'usr-legacy-admin',
+    name: 'Legacy Admin User',
+    email: 'legacyadmin@restaurant.com',
+    role: 'admin',
+    authSource: 'legacy_mock',
+  };
+  for (const perm of ALL_PERMISSIONS) {
+    assert(hasPermission(legacyAdmin, perm) === true, `Legacy admin must have role permission ${perm}`);
+  }
+  console.log('✓ Test 6: Legacy admin continues to receive full role permissions.');
+
+  // Test Case G: Legacy staff still uses existing role permissions
+  const legacyStaff: User = {
+    id: 'usr-legacy-staff',
+    name: 'Legacy Staff User',
+    email: 'legacystaff@restaurant.com',
+    role: 'staff',
+    authSource: 'legacy_mock',
+  };
+  for (const perm of STAFF_PERMISSIONS) {
+    assert(hasPermission(legacyStaff, perm) === true, `Legacy staff must have role permission ${perm}`);
+  }
+  for (const perm of staffForbidden) {
+    assert(hasPermission(legacyStaff, perm) === false, `Legacy staff must be DENIED ${perm}`);
+  }
+  console.log('✓ Test 7: Legacy staff continues to receive standard staff role permissions.');
+
+  // Test Case H: Admin user with authSource omitted / undefined
+  // Requirement: Users with missing or undefined authSource must receive NO permissions through role fallback, even if their role is admin.
+  const userWithoutAuthSource: User = {
+    id: 'usr-no-authsource-admin',
+    name: 'Admin Without AuthSource',
+    email: 'noauthsource@restaurant.com',
+    role: 'admin',
+    // authSource is deliberately omitted / undefined
+  };
+  assert(
+    hasPermission(userWithoutAuthSource, 'settings.manage') === false,
+    'Admin user with authSource omitted must be DENIED settings.manage (role fallback is strictly blocked)'
+  );
+  assert(
+    hasPermission(userWithoutAuthSource, 'dashboard.view') === false,
+    'Admin user with authSource omitted must be DENIED dashboard.view (role fallback is strictly blocked)'
+  );
+  assert(
+    hasPermission(userWithoutAuthSource, 'pos.use') === false,
+    'Admin user with authSource omitted must be DENIED pos.use (role fallback is strictly blocked)'
+  );
+  for (const perm of ALL_PERMISSIONS) {
+    assert(
+      hasPermission(userWithoutAuthSource, perm) === false,
+      `Admin user with authSource omitted must be DENIED ${perm} through role fallback`
+    );
+  }
+  console.log('✓ Test 8: Admin user with authSource omitted strictly receives NO permissions (role fallback blocked).');
+
+  // Test Case I: Admin user with authSource omitted and permissions: ['settings.manage']
+  // Requirement: Missing, undefined, or unknown authSource must return false for every permission, even if user.permissions contains that permission.
+  const adminWithPermsNoAuthSource: User = {
+    id: 'usr-no-authsource-with-perms',
+    name: 'Admin No AuthSource With Perms',
+    email: 'noauthperms@restaurant.com',
+    role: 'admin',
+    permissions: ['settings.manage'],
+    // authSource is deliberately omitted
+  };
+  assert(
+    hasPermission(adminWithPermsNoAuthSource, 'settings.manage') === false,
+    'Admin user with authSource omitted and permissions: ["settings.manage"] must return false'
+  );
+  for (const perm of ALL_PERMISSIONS) {
+    assert(
+      hasPermission(adminWithPermsNoAuthSource, perm) === false,
+      `Admin with authSource omitted must be DENIED ${perm} even when present in permissions array`
+    );
+  }
+  console.log('✓ Test 9: Admin user with authSource omitted and permissions: [\'settings.manage\'] returns false.');
+
+  console.log('\n✔ All permission assertions (Step 5A, 5B, 5C, 5F & Step 2E FIX 1) passed successfully!');
 }
 
 // Execute if run directly via tsx

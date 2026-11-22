@@ -64,15 +64,46 @@ export function hasRolePermission(role: Role, permission: Permission): boolean {
 }
 
 /**
- * Checks whether a user has a specific permission based strictly on user.role.
+ * Checks whether a user has a specific permission based on authentication source.
+ *
+ * Security Model:
+ * 1. Backend-authenticated users (authSource === 'database'):
+ *    - Allow only permissions explicitly included in user.permissions.
+ *
+ * 2. Legacy / Mock users (authSource === 'legacy_mock'):
+ *    - Preserve existing legacy permission behavior and role fallback.
+ *
+ * 3. Missing, undefined, or unknown authSource:
+ *    - Return false for every permission, even if user.permissions contains that permission.
  *
  * @param user The user object or session
  * @param permission The permission identifier to verify
- * @returns boolean true if user.role grants permission, false otherwise
+ * @returns boolean true if permitted, false otherwise
  */
-export function hasPermission(user: User | null | undefined, permission: Permission): boolean {
-  if (!user || !user.role) {
+export function hasPermission(user: User | null | undefined, permission: Permission | string): boolean {
+  if (!user) {
     return false;
   }
-  return hasRolePermission(user.role, permission);
+
+  // 1. Backend-authenticated users (authSource === 'database')
+  // Allow only permissions explicitly included in user.permissions.
+  if (user.authSource === 'database') {
+    return Array.isArray(user.permissions) && user.permissions.includes(permission);
+  }
+
+  // 2. Legacy / Mock users (authSource === 'legacy_mock')
+  // Preserve existing legacy permission behavior and role fallback.
+  if (user.authSource === 'legacy_mock') {
+    if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
+      return true;
+    }
+    if (user.role) {
+      return hasRolePermission(user.role, permission as Permission);
+    }
+    return false;
+  }
+
+  // 3. Missing, undefined, or unknown authSource
+  // Return false for every permission, even if user.permissions contains that permission.
+  return false;
 }

@@ -28,9 +28,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   permission,
   children,
 }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const { hasPermission } = usePermission();
   const location = useLocation();
+
+  // 0. Loading Layer (Prevent premature redirect while session is being verified)
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-orange-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
 
   // 1. Authentication Layer (Unauthenticated -> Redirect to /login)
   if (!isAuthenticated) {
