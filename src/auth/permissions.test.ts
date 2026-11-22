@@ -295,6 +295,28 @@ export function runPermissionTests() {
   }
   console.log('✓ Test 8: Admin user with authSource omitted strictly receives NO permissions (role fallback blocked).');
 
+  // Test Case I: Admin user with authSource omitted and permissions: ['settings.manage']
+  // Requirement: Missing, undefined, or unknown authSource must return false for every permission, even if user.permissions contains that permission.
+  const adminWithPermsNoAuthSource: User = {
+    id: 'usr-no-authsource-with-perms',
+    name: 'Admin No AuthSource With Perms',
+    email: 'noauthperms@restaurant.com',
+    role: 'admin',
+    permissions: ['settings.manage'],
+    // authSource is deliberately omitted
+  };
+  assert(
+    hasPermission(adminWithPermsNoAuthSource, 'settings.manage') === false,
+    'Admin user with authSource omitted and permissions: ["settings.manage"] must return false'
+  );
+  for (const perm of ALL_PERMISSIONS) {
+    assert(
+      hasPermission(adminWithPermsNoAuthSource, perm) === false,
+      `Admin with authSource omitted must be DENIED ${perm} even when present in permissions array`
+    );
+  }
+  console.log('✓ Test 9: Admin user with authSource omitted and permissions: [\'settings.manage\'] returns false.');
+
   console.log('\n✔ All permission assertions (Step 5A, 5B, 5C, 5F & Step 2E FIX 1) passed successfully!');
 }
 

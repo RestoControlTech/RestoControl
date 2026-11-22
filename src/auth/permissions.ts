@@ -68,12 +68,13 @@ export function hasRolePermission(role: Role, permission: Permission): boolean {
  *
  * Security Model:
  * 1. Backend-authenticated users (authSource === 'database'):
- *    - Must rely EXCLUSIVELY on user.permissions returned by PostgreSQL.
- *    - Never falls back to hardcoded ROLE_PERMISSIONS, preventing permission restriction bypasses.
- *    - If user.permissions is empty or lacks the permission, returns false.
+ *    - Allow only permissions explicitly included in user.permissions.
  *
- * 2. Legacy / Mock users (authSource === 'legacy_mock' or unassigned legacy fixture):
- *    - Preserves existing role-based fallback for explicitly identified legacy/mock users.
+ * 2. Legacy / Mock users (authSource === 'legacy_mock'):
+ *    - Preserve existing legacy permission behavior and role fallback.
+ *
+ * 3. Missing, undefined, or unknown authSource:
+ *    - Return false for every permission, even if user.permissions contains that permission.
  *
  * @param user The user object or session
  * @param permission The permission identifier to verify
@@ -85,14 +86,13 @@ export function hasPermission(user: User | null | undefined, permission: Permiss
   }
 
   // 1. Backend-authenticated users (authSource === 'database')
-  // They MUST rely EXCLUSIVELY on user.permissions from PostgreSQL.
-  // Under NO circumstances do they fall back to hardcoded ROLE_PERMISSIONS.
+  // Allow only permissions explicitly included in user.permissions.
   if (user.authSource === 'database') {
     return Array.isArray(user.permissions) && user.permissions.includes(permission);
   }
 
   // 2. Legacy / Mock users (authSource === 'legacy_mock')
-  // Role-based permission fallback is allowed ONLY when user.authSource === 'legacy_mock'.
+  // Preserve existing legacy permission behavior and role fallback.
   if (user.authSource === 'legacy_mock') {
     if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
       return true;
@@ -103,11 +103,7 @@ export function hasPermission(user: User | null | undefined, permission: Permiss
     return false;
   }
 
-  // 3. Users with missing, undefined, or unrecognized authSource
-  // Must receive NO permissions through role fallback, even if their role is admin.
-  if (Array.isArray(user.permissions) && user.permissions.includes(permission)) {
-    return true;
-  }
-
+  // 3. Missing, undefined, or unknown authSource
+  // Return false for every permission, even if user.permissions contains that permission.
   return false;
 }
