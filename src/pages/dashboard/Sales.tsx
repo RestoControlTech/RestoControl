@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction } from '../../types';
-import { filterSales } from '../../utils/salesFilters';
 import {
   SaleDetailModal,
   SaleReceiptModal,
@@ -16,30 +15,67 @@ import {
 } from '../../components/sales';
 import { usePartialRefund } from '../../hooks/usePartialRefund';
 import { useFullRefund } from '../../hooks/useFullRefund';
+import { useSalesHistory } from '../../hooks/useSalesHistory';
 
 interface SalesProps {
-  transactions: Transaction[];
+  transactions?: Transaction[];
   searchQuery?: string;
   onRefundSale?: (refundTx: Transaction, updatedSale: Transaction) => void;
 }
 
 export default function Sales({
-  transactions,
   searchQuery: externalSearch = '',
   onRefundSale,
 }: SalesProps) {
-  const [localSales, setLocalSales] = useState<Transaction[]>(transactions);
   const [activeDateTab, setActiveDateTab] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [localSearch, setLocalSearch] = useState('');
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [receiptToView, setReceiptToView] = useState<Transaction | null>(null);
 
-  // Synchronize if prop changes from parent
-  React.useEffect(() => {
-    setLocalSales(transactions);
-  }, [transactions]);
+  const effectiveSearch = localSearch || externalSearch;
+
+  // Debounce search input to avoid excessive requests on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(effectiveSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [effectiveSearch]);
+
+  // Reset pagination to page 1 when filters or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, activeDateTab, customStartDate, customEndDate, paymentFilter, statusFilter]);
+
+  const {
+    sales,
+    rawSalesById,
+    pagination,
+    isLoading,
+    error,
+    retry,
+    selectedSale,
+    selectedRawDetail,
+    isDetailLoading,
+    detailError,
+    openSaleDetail,
+    retrySaleDetail,
+    closeSaleDetail,
+  } = useSalesHistory({
+    search: debouncedSearch,
+    datePreset: activeDateTab,
+    customStartDate,
+    customEndDate,
+    paymentMethod: paymentFilter,
+    status: statusFilter,
+    page: currentPage,
+    limit: 20,
+  });
 
   // Hook managing partial refund modal state and execution
   const {
@@ -51,16 +87,10 @@ export default function Sales({
     handleConfirmRefund,
   } = usePartialRefund({
     onRefundSuccess: (refundTransaction, updatedSale) => {
-      setLocalSales((prev) => [
-        refundTransaction,
-        ...prev.map((t) => (t.id === updatedSale.id ? updatedSale : t)),
-      ]);
-      if (selectedTx && selectedTx.id === updatedSale.id) {
-        setSelectedTx(updatedSale);
-      }
       if (onRefundSale) {
         onRefundSale(refundTransaction, updatedSale);
       }
+      retry();
     },
   });
 
@@ -74,22 +104,12 @@ export default function Sales({
     handleConfirmFullRefund,
   } = useFullRefund({
     onRefundSuccess: (refundTransaction, updatedSale) => {
-      setLocalSales((prev) => [
-        refundTransaction,
-        ...prev.map((t) => (t.id === updatedSale.id ? updatedSale : t)),
-      ]);
-      if (selectedTx && selectedTx.id === updatedSale.id) {
-        setSelectedTx(updatedSale);
-      }
       if (onRefundSale) {
         onRefundSale(refundTransaction, updatedSale);
       }
+      retry();
     },
   });
-
-  // Multi-attribute filter states
-  const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const dateFilters = [
     { id: 'all', label: 'All' },
@@ -99,34 +119,6 @@ export default function Sales({
     { id: 'month', label: 'This Month' },
     { id: 'custom', label: 'Custom' },
   ];
-
-  // Completed sales representation (completed / paid transactions, excluding draft or cancelled tickets)
-  const completedSales = useMemo(() => {
-    return localSales.filter(
-      (tx) => tx.status === 'Receipt' || tx.status === 'Completed' || tx.status === 'Refunded'
-    );
-  }, [localSales]);
-
-  // Filtered sales based on date range, search query, and filter criteria
-  const filteredSales = useMemo(() => {
-    return filterSales(completedSales, {
-      searchQuery: localSearch || externalSearch,
-      paymentMethod: paymentFilter,
-      status: statusFilter,
-      dateRangePreset: activeDateTab,
-      customStart: customStartDate,
-      customEnd: customEndDate,
-    });
-  }, [
-    completedSales,
-    activeDateTab,
-    customStartDate,
-    customEndDate,
-    externalSearch,
-    localSearch,
-    paymentFilter,
-    statusFilter,
-  ]);
 
   const hasActiveFilters = Boolean(
     localSearch ||
@@ -140,11 +132,13 @@ export default function Sales({
 
   const handleClearFilters = () => {
     setLocalSearch('');
+    setDebouncedSearch('');
     setActiveDateTab('all');
     setCustomStartDate('');
     setCustomEndDate('');
     setPaymentFilter('all');
     setStatusFilter('all');
+    setCurrentPage(1);
   };
 
   return (
@@ -174,24 +168,34 @@ export default function Sales({
         onStatusFilterChange={setStatusFilter}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={handleClearFilters}
-        filteredCount={filteredSales.length}
+        filteredCount={pagination.total}
       />
 
       {/* Completed Sales List Table */}
       <SalesTable
-        sales={filteredSales}
-        totalCompletedCount={completedSales.length}
+        sales={sales}
+        rawSalesById={rawSalesById}
+        totalCompletedCount={pagination.total}
         hasActiveFilters={hasActiveFilters}
-        onSelectSale={(sale) => setSelectedTx(sale)}
+        isLoading={isLoading}
+        error={error}
+        onRetry={retry}
+        pagination={pagination}
+        onPageChange={setCurrentPage}
+        onSelectSale={(sale) => openSaleDetail(sale)}
         onViewReceipt={(sale) => setReceiptToView(sale)}
         onOpenRefund={(sale) => openFullRefundModal(sale)}
       />
 
       {/* Sale Detail View Modal */}
       <SaleDetailModal
-        isOpen={Boolean(selectedTx)}
-        onClose={() => setSelectedTx(null)}
-        sale={selectedTx}
+        isOpen={Boolean(selectedSale)}
+        onClose={closeSaleDetail}
+        sale={selectedSale}
+        rawDetail={selectedRawDetail || (selectedSale ? rawSalesById[selectedSale.id] : null)}
+        isLoading={isDetailLoading}
+        error={detailError}
+        onRetryDetail={retrySaleDetail}
         onOpenReceipt={(sale) => setReceiptToView(sale)}
         onOpenRefund={(sale, item) => openRefundModal(sale, item)}
         onOpenFullRefund={(sale) => openFullRefundModal(sale)}
