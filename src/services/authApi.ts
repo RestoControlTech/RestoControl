@@ -25,6 +25,9 @@
  * ============================================================================
  */
 
+import { apiClient } from './api/client';
+import { isApiError } from './api/errors';
+
 export const TOKEN_STORAGE_KEY = 'restocontrol_jwt_token';
 
 export interface BackendRole {
@@ -134,6 +137,9 @@ export function getAuthHeaders(): HeadersInit {
   return headers;
 }
 
+// Deduplicate concurrent logout calls to prevent duplicate POST /api/auth/logout requests
+let inFlightLogout: Promise<LogoutApiResponse> | null = null;
+
 /**
  * POST /api/auth/login
  * Authenticates user credentials with Express + PostgreSQL backend
@@ -143,23 +149,19 @@ export async function apiLogin(credentials: {
   password: string;
 }): Promise<LoginApiResponse> {
   try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const data = await apiClient.post<LoginApiResponse>(
+      '/auth/login',
+      {
         email: credentials.email.trim(),
         password: credentials.password,
-      }),
-    });
+      },
+      { skipAuth: true }
+    );
 
-    const data = (await res.json()) as LoginApiResponse;
-
-    if (!res.ok || !data.success) {
+    if (!data || !data.success) {
       return {
         success: false,
-        error: data.error || 'Invalid email or password. Please try again.',
+        error: data?.error || 'Invalid email or password. Please try again.',
       };
     }
 
@@ -168,7 +170,20 @@ export async function apiLogin(credentials: {
     }
 
     return data;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    if (isApiError(err)) {
+      if (err.isNetworkError || err.isTimeout || err.isAborted) {
+        return {
+          success: false,
+          error: 'Cannot connect to authentication service. Please check your connection and try again.',
+        };
+      }
+      return {
+        success: false,
+        error: err.message || 'Invalid email or password. Please try again.',
+      };
+    }
+
     return {
       success: false,
       error: 'Cannot connect to authentication service. Please check your connection and try again.',
@@ -190,26 +205,30 @@ export async function apiGetMe(): Promise<MeApiResponse> {
   }
 
   try {
-    const res = await fetch('/api/auth/me', {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
+    const data = await apiClient.get<MeApiResponse>('/auth/me');
 
-    const data = (await res.json()) as MeApiResponse;
-
-    if (!res.ok || !data.success) {
-      // If unauthorized / token expired / deactivated, clear local token
-      if (res.status === 401) {
-        clearToken();
-      }
+    if (!data || !data.success) {
       return {
         success: false,
-        error: data.error || 'Session is invalid or has expired.',
+        error: data?.error || 'Session is invalid or has expired.',
       };
     }
 
     return data;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    if (isApiError(err)) {
+      if (err.isNetworkError || err.isTimeout || err.isAborted) {
+        return {
+          success: false,
+          error: 'Network error verifying session with server.',
+        };
+      }
+      return {
+        success: false,
+        error: err.message || 'Session is invalid or has expired.',
+      };
+    }
+
     return {
       success: false,
       error: 'Network error verifying session with server.',
@@ -222,22 +241,30 @@ export async function apiGetMe(): Promise<MeApiResponse> {
  * Formal stateless logout terminating session on client
  */
 export async function apiLogout(): Promise<LogoutApiResponse> {
-  try {
-    const token = getToken();
-    if (token) {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-      });
-    }
-  } catch {
-    // Silent fail on network error: client MUST clear token anyway
-  } finally {
-    clearToken();
+  if (inFlightLogout) {
+    return inFlightLogout;
   }
 
-  return {
-    success: true,
-    message: 'Logged out successfully.',
-  };
+  inFlightLogout = (async () => {
+    try {
+      const token = getToken();
+      if (token) {
+        await apiClient.post<LogoutApiResponse>('/auth/logout', undefined, {
+          clearTokenOn401: false,
+        });
+      }
+    } catch {
+      // Silent fail on network or 401 error: client MUST clear token anyway
+    } finally {
+      clearToken();
+      inFlightLogout = null;
+    }
+
+    return {
+      success: true,
+      message: 'Logged out successfully.',
+    };
+  })();
+
+  return inFlightLogout;
 }
