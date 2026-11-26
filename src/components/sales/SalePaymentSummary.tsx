@@ -6,11 +6,13 @@
 import React from 'react';
 import { CreditCard, Banknote, QrCode, Smartphone } from 'lucide-react';
 import { Transaction } from '../../types';
+import { BackendSaleDetailDto, BackendSaleListItemDto, parseMoneyAmount } from '../../services/salesApi';
 import { formatPrice } from '../../utils/format';
 import { Badge } from '../ui';
 
 export interface SalePaymentSummaryProps {
   sale: Transaction;
+  rawDetail?: BackendSaleDetailDto | BackendSaleListItemDto | null;
   currency: string;
   isRefund: boolean;
   isCash: boolean;
@@ -18,6 +20,7 @@ export interface SalePaymentSummaryProps {
 
 export const SalePaymentSummary: React.FC<SalePaymentSummaryProps> = ({
   sale,
+  rawDetail,
   currency,
   isRefund,
   isCash,
@@ -32,10 +35,28 @@ export const SalePaymentSummary: React.FC<SalePaymentSummaryProps> = ({
         return <Smartphone className="w-3.5 h-3.5 text-purple-600" />;
       case 'Credit Card':
       case 'Debit Card':
-      default:
         return <CreditCard className="w-3.5 h-3.5 text-orange-600" />;
+      default:
+        return null;
     }
   };
+
+  const serviceCharge = rawDetail ? parseMoneyAmount(rawDetail.serviceChargeAmount) : 0;
+  const discountAmount = rawDetail ? parseMoneyAmount(rawDetail.discountAmount) : 0;
+  const paymentStatusLabel = rawDetail
+    ? rawDetail.paymentStatus === 'PARTIALLY_PAID'
+      ? 'Partially Paid'
+      : rawDetail.paymentStatus === 'UNPAID'
+      ? 'Unpaid'
+      : 'Paid'
+    : sale.paymentStatus || (isRefund ? 'Refunded' : 'Paid');
+  const paymentBadgeVariant: 'red' | 'amber' | 'slate' | 'emerald' = isRefund
+    ? 'red'
+    : rawDetail?.paymentStatus === 'PARTIALLY_PAID'
+    ? 'amber'
+    : rawDetail?.paymentStatus === 'UNPAID'
+    ? 'slate'
+    : 'emerald';
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -52,11 +73,25 @@ export const SalePaymentSummary: React.FC<SalePaymentSummaryProps> = ({
           </div>
         )}
 
-        {/* Tax only shown if the existing system uses it */}
+        {/* Tax only shown if present */}
         {sale.tax !== undefined && sale.tax > 0 && (
           <div className="flex justify-between text-slate-500 font-semibold">
-            <span>Tax / Service:</span>
+            <span>Tax:</span>
             <span className="font-mono">{formatPrice(sale.tax, currency)}</span>
+          </div>
+        )}
+
+        {serviceCharge > 0 && (
+          <div className="flex justify-between text-slate-500 font-semibold">
+            <span>Service Charge:</span>
+            <span className="font-mono">{formatPrice(serviceCharge, currency)}</span>
+          </div>
+        )}
+
+        {discountAmount > 0 && (
+          <div className="flex justify-between text-emerald-600 font-semibold">
+            <span>Discount:</span>
+            <span className="font-mono">-{formatPrice(discountAmount, currency)}</span>
           </div>
         )}
 
@@ -90,25 +125,25 @@ export const SalePaymentSummary: React.FC<SalePaymentSummaryProps> = ({
           <span>Method:</span>
           <span className="font-bold text-slate-800 flex items-center gap-1.5">
             {getPaymentMethodIcon(sale.paymentMethod)}
-            {sale.paymentMethod || 'Credit Card'}
+            {sale.paymentMethod || rawDetail?.paymentSummary || '—'}
           </span>
         </div>
 
         <div className="flex justify-between items-center text-slate-600 font-semibold">
           <span>Payment Status:</span>
           <Badge
-            variant={isRefund ? 'red' : 'emerald'}
+            variant={paymentBadgeVariant}
             size="xs"
             className="font-bold text-[9px]"
           >
-            {sale.paymentStatus || (isRefund ? 'Refunded' : 'Paid')}
+            {paymentStatusLabel}
           </Badge>
         </div>
 
         <div className="flex justify-between items-center text-slate-600 font-semibold">
           <span>Amount Paid:</span>
           <span className="font-mono font-bold text-slate-800">
-            {formatPrice(sale.amountPaid ?? Math.max(0, sale.amount), currency)}
+            {formatPrice(sale.amountPaid ?? 0, currency)}
           </span>
         </div>
 

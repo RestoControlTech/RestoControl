@@ -29,6 +29,7 @@ export class AuthController {
    */
   async getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      res.setHeader('Cache-Control', 'no-store');
       const user = await authService.getCurrentUser(req.user!.id);
       res.status(200).json({
         success: true,

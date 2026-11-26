@@ -8,14 +8,23 @@ import { createApiApp } from './src/server/api.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const EXPRESS_BACKEND_PREFIXES = ['/api/auth', '/api/sales'];
+
+function isExpressBackendRoute(url?: string): boolean {
+  if (!url) return false;
+  return EXPRESS_BACKEND_PREFIXES.some(
+    (prefix) => url === prefix || url.startsWith(`${prefix}/`) || url.startsWith(`${prefix}?`)
+  );
+}
+
 function backendApiPlugin(): Plugin {
   const app = createApiApp();
   return {
     name: 'backend-api-plugin',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        // Narrow bypass: Route /api/auth to the standalone Express backend on port 4000
-        if (req.url && req.url.startsWith('/api/auth')) {
+        // Narrow bypass: Route /api/auth and /api/sales to the standalone Express backend on port 4000
+        if (isExpressBackendRoute(req.url)) {
           return next();
         }
         app(req as any, res as any, next);
@@ -23,7 +32,7 @@ function backendApiPlugin(): Plugin {
     },
     configurePreviewServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url && req.url.startsWith('/api/auth')) {
+        if (isExpressBackendRoute(req.url)) {
           return next();
         }
         app(req as any, res as any, next);
@@ -46,6 +55,10 @@ export default defineConfig(() => {
           target: 'http://localhost:4000',
           changeOrigin: true,
         },
+        '/api/sales': {
+          target: 'http://localhost:4000',
+          changeOrigin: true,
+        },
       },
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify - file watching is disabled to prevent flickering during agent edits.
@@ -58,6 +71,10 @@ export default defineConfig(() => {
     preview: {
       proxy: {
         '/api/auth': {
+          target: 'http://localhost:4000',
+          changeOrigin: true,
+        },
+        '/api/sales': {
           target: 'http://localhost:4000',
           changeOrigin: true,
         },

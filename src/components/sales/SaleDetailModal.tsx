@@ -17,6 +17,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Transaction, SaleItem } from '../../types';
+import { BackendSaleDetailDto, BackendSaleListItemDto } from '../../services/salesApi';
 import { formatPrice } from '../../utils/format';
 import { isSaleEligibleForRefund } from '../../utils/refundRules';
 import { getRefundableQuantity } from '../../utils/refundUtils';
@@ -27,6 +28,10 @@ export interface SaleDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   sale: Transaction | null;
+  rawDetail?: BackendSaleDetailDto | BackendSaleListItemDto | null;
+  isLoading?: boolean;
+  error?: string | null;
+  onRetryDetail?: () => void;
   onOpenReceipt?: (sale: Transaction) => void;
   onOpenRefund?: (sale: Transaction, item?: SaleItem) => void;
   onOpenFullRefund?: (sale: Transaction) => void;
@@ -36,6 +41,10 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   isOpen,
   onClose,
   sale,
+  rawDetail,
+  isLoading = false,
+  error = null,
+  onRetryDetail,
   onOpenReceipt,
   onOpenRefund,
   onOpenFullRefund,
@@ -46,6 +55,10 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
   const isRefund = sale.status === 'Refunded' || sale.paymentStatus === 'Refunded';
   const isCash = sale.paymentMethod?.toLowerCase() === 'cash';
   const isEligibleForRefund = isSaleEligibleForRefund(sale).eligible;
+  const txNumberLabel = rawDetail?.transactionNumber || `#${sale.id.replace('tx-', 'TX-')}`;
+  const formattedDate = /^\d{4}-\d{2}-\d{2}T/.test(sale.dateTime)
+    ? new Date(sale.dateTime).toLocaleString()
+    : sale.dateTime;
 
   return (
     <Modal
@@ -69,12 +82,12 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="font-black text-slate-900 text-base">{sale.orderNumber}</h3>
                 <span className="text-[10px] font-mono text-slate-400 font-bold">
-                  (ID: #{sale.id.replace('tx-', 'TX-')})
+                  ({txNumberLabel})
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1 mt-0.5">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>{sale.dateTime}</span>
+                <span>{formattedDate}</span>
               </p>
             </div>
           </div>
@@ -100,6 +113,23 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
           </div>
         </div>
 
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-center justify-between gap-2 text-xs text-rose-700 font-semibold">
+            <span>{error}</span>
+            {onRetryDetail && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onRetryDetail}
+                icon={<RotateCcw className="w-3 h-3" />}
+              >
+                Retry
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* 2. Order Metadata Information Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white border border-slate-100 rounded-2xl p-3.5 text-xs">
           <div>
@@ -108,7 +138,7 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
             </span>
             <span className="font-extrabold text-slate-800 flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              {sale.table || 'Dine-in'}
+              {sale.table || '—'}
             </span>
           </div>
 
@@ -120,6 +150,11 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
               <User className="w-3.5 h-3.5 text-slate-400" />
               {sale.customerName || 'Walk-in Guest'}
             </span>
+            {rawDetail?.cashier?.name && (
+              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
+                Cashier: {rawDetail.cashier.name}
+              </span>
+            )}
           </div>
 
           <div>
@@ -139,7 +174,12 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
             Purchased Items & Breakdown
           </h4>
 
-          {sale.items && sale.items.length > 0 ? (
+          {isLoading ? (
+            <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center gap-2 text-xs text-slate-500 font-semibold">
+              <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              <span>Loading sale details...</span>
+            </div>
+          ) : sale.items && sale.items.length > 0 ? (
             <div className="border border-slate-100 rounded-2xl overflow-hidden bg-white shadow-xs">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
@@ -211,6 +251,7 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({
         {/* 4. Financial & Payment Information Split Cards */}
         <SalePaymentSummary
           sale={sale}
+          rawDetail={rawDetail}
           currency={currency}
           isRefund={isRefund}
           isCash={isCash}
