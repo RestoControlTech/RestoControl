@@ -468,8 +468,100 @@ async function runAuthIntegrationTestSuite() {
     assert.ok(!loadingHtml.includes('POS Page'), 'Must not render unverified content');
     console.log('✓ Scenario 12 passed: isLoading=true holds the route and displays loading fallback without premature redirect.');
 
+    // -------------------------------------------------------------------------
+    // SCENARIO 13: Recoverable failures during initializeAuth() preserve JWT & session
+    // -------------------------------------------------------------------------
+    console.log('13. Testing Recoverable Failures Preserve JWT & Session (Scenario 13) ...');
+    const persistedAdmin = mapBackendUserToFrontend(SAMPLE_BACKEND_USER);
+
+    // 13A. Network error preserves token & persisted session and clears isLoading
+    setToken(SAMPLE_JWT_TOKEN);
+    useAuthStore.setState({
+      user: persistedAdmin,
+      token: SAMPLE_JWT_TOKEN,
+      isAuthenticated: true,
+      isLoading: true,
+    });
+    globalThis.fetch = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    await useAuthStore.getState().initializeAuth();
+    assert.strictEqual(getToken(), SAMPLE_JWT_TOKEN, 'Network error must NOT clear stored JWT');
+    assert.strictEqual(useAuthStore.getState().token, SAMPLE_JWT_TOKEN, 'Network error must preserve store token');
+    assert.strictEqual(useAuthStore.getState().isAuthenticated, true, 'Network error must NOT log user out');
+    assert.strictEqual(useAuthStore.getState().user?.email, 'panbunhen58@gmail.com');
+    assert.strictEqual(useAuthStore.getState().isLoading, false, 'isLoading must finish after network error');
+
+    // 13B. Timeout (AbortError) preserves token & session and finishes loading
+    setToken(SAMPLE_JWT_TOKEN);
+    useAuthStore.setState({
+      user: persistedAdmin,
+      token: SAMPLE_JWT_TOKEN,
+      isAuthenticated: true,
+      isLoading: true,
+    });
+    globalThis.fetch = async () => {
+      const err = new Error('The operation was aborted');
+      err.name = 'AbortError';
+      throw err;
+    };
+    await useAuthStore.getState().initializeAuth();
+    assert.strictEqual(getToken(), SAMPLE_JWT_TOKEN, 'Timeout/abort must NOT clear stored JWT');
+    assert.strictEqual(useAuthStore.getState().isAuthenticated, true, 'Timeout must NOT log user out');
+    assert.strictEqual(useAuthStore.getState().isLoading, false, 'isLoading must finish after timeout');
+
+    // 13C. Server 5xx preserves token & session and finishes loading
+    setToken(SAMPLE_JWT_TOKEN);
+    useAuthStore.setState({
+      user: persistedAdmin,
+      token: SAMPLE_JWT_TOKEN,
+      isAuthenticated: true,
+      isLoading: true,
+    });
+    globalThis.fetch = async () => createMockResponse(502, { success: false, error: 'Bad Gateway' });
+    await useAuthStore.getState().initializeAuth();
+    assert.strictEqual(getToken(), SAMPLE_JWT_TOKEN, 'HTTP 5xx must NOT clear stored JWT');
+    assert.strictEqual(useAuthStore.getState().isAuthenticated, true, 'HTTP 5xx must NOT log user out');
+    assert.strictEqual(useAuthStore.getState().isLoading, false, 'isLoading must finish after HTTP 5xx');
+
+    // 13D. HTTP 403 preserves token & session and finishes loading
+    setToken(SAMPLE_JWT_TOKEN);
+    useAuthStore.setState({
+      user: persistedAdmin,
+      token: SAMPLE_JWT_TOKEN,
+      isAuthenticated: true,
+      isLoading: true,
+    });
+    globalThis.fetch = async () => createMockResponse(403, { success: false, error: 'Forbidden' });
+    await useAuthStore.getState().initializeAuth();
+    assert.strictEqual(getToken(), SAMPLE_JWT_TOKEN, 'HTTP 403 must NOT clear stored JWT');
+    assert.strictEqual(useAuthStore.getState().isAuthenticated, true, 'HTTP 403 must NOT log user out');
+    assert.strictEqual(useAuthStore.getState().isLoading, false, 'isLoading must finish after HTTP 403');
+
+    // 13E. Concurrent initializeAuth calls remain deduplicated even on recoverable 5xx
+    let concurrent5xxHits = 0;
+    useAuthStore.setState({
+      user: persistedAdmin,
+      token: SAMPLE_JWT_TOKEN,
+      isAuthenticated: true,
+      isLoading: true,
+    });
+    globalThis.fetch = async () => {
+      concurrent5xxHits++;
+      await new Promise((r) => setTimeout(r, 10));
+      return createMockResponse(503, { success: false, error: 'Service Unavailable' });
+    };
+    await Promise.all([
+      useAuthStore.getState().initializeAuth(),
+      useAuthStore.getState().initializeAuth(),
+    ]);
+    assert.strictEqual(concurrent5xxHits, 1, 'Concurrent initializeAuth must remain deduplicated');
+    assert.strictEqual(getToken(), SAMPLE_JWT_TOKEN, 'Concurrent 503 must preserve JWT');
+    assert.strictEqual(useAuthStore.getState().isLoading, false);
+    console.log('✓ Scenario 13 passed: Network, timeout, 5xx, and 403 failures preserve JWT/session and finish loading.');
+
     console.log('\n====================================================================');
-    console.log('✔ ALL 12 FRONTEND AUTHENTICATION INTEGRATION SCENARIOS PASSED!');
+    console.log('✔ ALL 13 FRONTEND AUTHENTICATION INTEGRATION SCENARIOS PASSED!');
     console.log('====================================================================\n');
   } finally {
     globalThis.fetch = originalFetch;

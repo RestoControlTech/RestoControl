@@ -70,6 +70,8 @@ export interface MeApiResponse {
     user: BackendSafeUser;
   };
   error?: string;
+  status?: number;
+  isUnauthorized?: boolean;
 }
 
 export interface LogoutApiResponse {
@@ -205,12 +207,16 @@ export async function apiGetMe(): Promise<MeApiResponse> {
   }
 
   try {
-    const data = await apiClient.get<MeApiResponse>('/auth/me');
+    const data = await apiClient.get<MeApiResponse>('/auth/me', {
+      cache: 'no-store',
+    });
 
     if (!data || !data.success) {
       return {
         success: false,
         error: data?.error || 'Session is invalid or has expired.',
+        status: 200,
+        isUnauthorized: false,
       };
     }
 
@@ -221,17 +227,23 @@ export async function apiGetMe(): Promise<MeApiResponse> {
         return {
           success: false,
           error: 'Network error verifying session with server.',
+          status: err.status,
+          isUnauthorized: false,
         };
       }
       return {
         success: false,
         error: err.message || 'Session is invalid or has expired.',
+        status: err.status,
+        isUnauthorized: err.isUnauthorized,
       };
     }
 
     return {
       success: false,
       error: 'Network error verifying session with server.',
+      status: 0,
+      isUnauthorized: false,
     };
   }
 }

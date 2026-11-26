@@ -14,6 +14,7 @@ import {
   clearToken,
   BackendSafeUser,
 } from '../services/authApi';
+import { isApiError } from '../services/api/errors';
 
 interface MockUserEntry {
   credentials: {
@@ -331,7 +332,8 @@ export const useAuthStore = create<AuthState>()(
                 isAuthenticated: true,
                 isLoading: false,
               });
-            } else {
+            } else if (res.isUnauthorized || res.status === 401) {
+              // Explicitly unauthorized: clear invalid token and reset authenticated session
               clearToken();
               set({
                 user: null,
@@ -339,15 +341,30 @@ export const useAuthStore = create<AuthState>()(
                 isAuthenticated: false,
                 isLoading: false,
               });
+            } else {
+              // Recoverable error (network, timeout, proxy/5xx, 403):
+              // Preserve JWT and persisted user/session; finish loading state cleanly.
+              set({
+                token,
+                isLoading: false,
+              });
             }
-          } catch {
-            clearToken();
-            set({
-              user: null,
-              token: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
+          } catch (err: unknown) {
+            if (isApiError(err) && err.isUnauthorized) {
+              clearToken();
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+                isLoading: false,
+              });
+            } else {
+              // Recoverable failure: preserve JWT and existing session
+              set({
+                token,
+                isLoading: false,
+              });
+            }
           } finally {
             inFlightInitializeAuth = null;
           }

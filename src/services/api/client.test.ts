@@ -82,9 +82,20 @@ async function runApiClientTests() {
     });
     assert.strictEqual(getRes.method, 'GET');
     assert.strictEqual(getRes.url, '/api/menu?active=true');
+    assert.strictEqual(
+      recordedCalls[0].headers['Content-Type'],
+      undefined,
+      'GET without body must NOT include Content-Type header'
+    );
+    assert.strictEqual(
+      recordedCalls[0].headers['content-type'],
+      undefined,
+      'GET without body must NOT include lowercase content-type header'
+    );
 
     const postRes = await apiClient.post<{ success: boolean; method: string }>('/orders', { tableId: 'T1' });
     assert.strictEqual(postRes.method, 'POST');
+    assert.strictEqual(recordedCalls[1].headers['Content-Type'], 'application/json');
     assert.strictEqual(recordedCalls[1].body, JSON.stringify({ tableId: 'T1' }));
 
     const putRes = await apiClient.put<{ success: boolean; method: string }>('/menu/1', { name: 'Latte' });
@@ -365,11 +376,15 @@ async function runApiClientTests() {
     assert.strictEqual(logoutCallCount, 1, 'Concurrent apiLogout calls must execute only 1 POST /api/auth/logout');
     assert.strictEqual(getToken(), null, 'Token must be cleared after logout');
 
-    // 7D. GET /api/auth/me restores user session
+    // 7D. GET /api/auth/me restores user session with cache: 'no-store' and no Content-Type header
     setToken(SAMPLE_TOKEN);
+    let meRequestCache: RequestCache | undefined;
+    let meContentType: string | undefined;
     globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const url = String(input);
       const headers = (init?.headers || {}) as Record<string, string>;
+      meRequestCache = init?.cache;
+      meContentType = headers['Content-Type'] ?? headers['content-type'];
       if (url === '/api/auth/me' && headers['Authorization'] === `Bearer ${SAMPLE_TOKEN}`) {
         return createTextResponse(
           200,
@@ -397,6 +412,8 @@ async function runApiClientTests() {
     const meRes = await apiGetMe();
     assert.strictEqual(meRes.success, true);
     assert.strictEqual(meRes.data?.user.email, 'admin@autumn.test');
+    assert.strictEqual(meRequestCache, 'no-store', 'GET /api/auth/me must request cache: no-store');
+    assert.strictEqual(meContentType, undefined, 'GET /api/auth/me without body must not attach Content-Type');
     clearToken();
     console.log('✓ Test 7 passed: Auth integration regression checks passed.');
 

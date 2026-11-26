@@ -114,7 +114,7 @@ async function executeRequest<T = unknown>(
     } else {
       requestBody = options.body as BodyInit;
     }
-  } else if (!headers['Content-Type'] && !headers['content-type']) {
+  } else if (method !== 'GET' && !headers['Content-Type'] && !headers['content-type']) {
     headers['Content-Type'] = 'application/json';
   }
 
@@ -158,6 +158,7 @@ async function executeRequest<T = unknown>(
       headers,
       body: method === 'GET' || method === 'DELETE' ? (options.body !== undefined ? requestBody : undefined) : requestBody,
       signal: controller.signal,
+      ...(options.cache ? { cache: options.cache } : {}),
     });
 
     const parsed = await parseResponseBody(response);

@@ -35,6 +35,7 @@ export interface ApiRequestOptions {
   params?: Record<string, QueryParamValue>;
   timeoutMs?: number;
   signal?: AbortSignal;
+  cache?: RequestCache;
   /**
    * When true, omits Authorization header and disables automatic token purge on 401.
    * Useful for public/login endpoints.
